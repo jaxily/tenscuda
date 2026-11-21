@@ -117,9 +117,10 @@ Other checks (all in `tests/`, 18 passing on the P150a):
   Python model every token (about 0.25 s per step on a 2015-era 4-core CPU), while the card
   itself is busy for only about 6% of the step. Small models are therefore slower than running
   them on the CPU. Larger models should do relatively better, but that isn't measured yet.
-- **Quantization (bfp8/bfp4) is unverified.** TT-XLA has a `weight_dtype_override` path, but
-  our early checks show it doesn't apply in TensCUDA's lazy mode, and cached graphs can hide
-  dtype changes. Don't rely on it.
+- **Quantization is experimental.** `tenscuda.quant.quantize_weights(model, "bfp_bf8")` uses
+  TT-XLA's weight-dtype pass. On TinyLlama, bfp8 keeps 32/32 token parity and bfp4 is clearly
+  lossy (87.9% argmax agreement). Device-memory savings are **not** verified, and speed doesn't
+  change. Switching dtypes inside one process reuses stale cached graphs. See docs/PERF.md section 7.
 - **Single card only.** Multi-card / two-P150 tensor parallelism isn't implemented.
 - **No CUDA extensions.** flash-attn, bitsandbytes, xformers, custom CUDA kernels, Triton
   kernels and most ComfyUI custom nodes are unsupported.

@@ -1,4 +1,4 @@
-"""UNVERIFIED quantization check (see docs/PERF.md section 7): override alone is a no-op in lazy mode."""
+"""Demonstrates the PITFALL: weight_dtype_override without a parameter mark is a no-op, and in-process graph reuse hides dtype changes. Use scripts/quant_logits.py."""
 import sys, torch
 import tenscuda
 from tenscuda.loader import load_causal_lm

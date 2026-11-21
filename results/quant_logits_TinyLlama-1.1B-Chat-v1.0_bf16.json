@@ -1,0 +1,9 @@
+{
+ "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+ "weight_dtype": "bf16",
+ "n_quantized": 0,
+ "logits_rel_l2": 0.02321859821677208,
+ "argmax_agree_all": 1.0,
+ "argmax_agree_generated": 1.0,
+ "kl_generated": 0.00023408142442349344
+}

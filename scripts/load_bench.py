@@ -26,9 +26,8 @@ load_s = time.time() - t
 rss_after_load = peak_rss_gib()
 applied = []
 if wdt:
-    from tt_torch.weight_dtype import apply_weight_dtype_overrides
-    applied = apply_weight_dtype_overrides(m, {"model.layers.*.weight": wdt})
-    applied = [a for a in applied if ".mlp." in a[0] or ".self_attn." in a[0]]
+    from tenscuda.quant import quantize_weights
+    applied = quantize_weights(m, wdt)
 tok = AutoTokenizer.from_pretrained(mid)
 msgs = [{"role": "user", "content": "Explain in two sentences why the sky is blue."}]
 ids = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt", return_dict=True)["input_ids"] \

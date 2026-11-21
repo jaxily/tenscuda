@@ -101,14 +101,42 @@ The streaming loader builds the model on `meta`, uploads one safetensors tensor 
 rebuilds non-persistent buffers (rotary `inv_freq`) on the CPU. Most of the end-of-run RSS growth
 comes from graph compilation (TT-MLIR), not from weights.
 
-## 7. Quantization (bfp8 / bfp4): UNVERIFIED
+## 7. Quantization (bfp8 / bfp4): works with a required fix. Accuracy is verified; memory saving is NOT verified.
 
-- In lazy mode, `torch.ops.tt.weight_dtype_override` on a weight alone has **no effect**. A
-  single 2048x2048 linear gives rel err 2.88e-3 for bf16, "bfp8" and "bfp4" alike, and TinyLlama
-  logits are identical across all three.
-- Marking the weight as a `parameter` argument (`tt.mark_argument_attributes`) as well makes
-  the conversion happen. We saw about 7.9e-3 (bfp8-like) and 1.11e-1 (bfp4-like) errors.
-- The results then depend on which variant compiled first. The graph cache seems to ignore the
-  dtype attribute, so a later variant with the same structure reuses the earlier executable.
-  Each variant must be measured in a fresh process, which hasn't been done yet.
-- Device memory can't be measured yet: `xm.get_memory_info` returns UNIMPLEMENTED on this plugin.
+**The trap (why it first looked like it worked).** In lazy mode, `torch.ops.tt.weight_dtype_override`
+alone is a no-op. tt-mlir only converts weights whose graph argument is marked `parameter`.
+The early "quantized" TinyLlama runs (rel err 0.03654 for bf16, bfp8 and bfp4 alike, identical
+text) were really bf16.
+
+**The second trap.** torch-xla's in-process graph cache ignores the dtype attribute. When bf16,
+bfp8 and bfp4 graphs with the same structure run in one process, they all reuse the first
+compiled executable. Every variant below ran in its own process.
+
+Single 2048x2048 linear, 32 tokens, fresh process per variant (`scripts/quant_probe.py`):
+
+| Variant | rel L2 vs CPU fp32 |
+|---|---|
+| bf16 | 2.88e-3 |
+| override bfp8 / bfp4 only | 2.88e-3 / 2.88e-3 (no-op) |
+| `parameter` mark only | 2.88e-3 |
+| override + `parameter` mark, bfp8 | 7.86e-3 |
+| override + `parameter` mark, bfp4 | 1.11e-1 |
+
+TinyLlama-1.1B with all 154 decoder Linear weights converted (`tenscuda.quant.quantize_weights`,
+streaming loader). Logits are teacher-forced against CPU fp32 over prompt + 32 tokens
+(`scripts/quant_logits.py`); greedy tokens are compared with CPU fp32 (`scripts/load_bench.py`).
+
+| Weights | logits rel L2 | argmax agree (generated) | KL (generated) | greedy tokens vs CPU fp32 | warm decode tok/s (3 runs) | first run |
+|---|---|---|---|---|---|---|
+| bf16 | 2.32e-2 | 100% | 2.3e-4 | 32/32 | 4.51 / 3.21* / 4.44 | 57 s |
+| bfp8 | 2.74e-2 | 100% | 6.5e-4 | **32/32** | 3.90 / 4.03 / 4.02 | 67 s |
+| bfp4 | 2.38e-1 | 87.9% | 1.1e-1 | 6/32 (diverges, still fluent) | 4.09 / 4.05 / 4.03 | 63 s |
+
+(*) That run overlapped a model download on the same host.
+
+- bfp8 is close to lossless at this size, and bfp4 is clearly lossy.
+- Speed doesn't change, because decoding is host-bound (section 5).
+- Host RSS doesn't change either: weights still upload as bf16 (about 0.69 GiB after load in all modes).
+- **Device memory saving is unmeasured.** `xm.get_memory_info` returns UNIMPLEMENTED, and the
+  conversion is a typecast inside the compiled graph, so the bf16 originals may stay resident.
+  Until device DRAM can be measured, don't count on bfp to fit bigger models.

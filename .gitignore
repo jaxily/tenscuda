@@ -7,11 +7,11 @@ dl.log
 install.log
 generated/
 .api_key
-# quantization results are unverified (see docs/PERF.md section 7)
-results/*bfp*
-results/quant_*
+# large or raw artifacts
 results/prof_*
 *.safetensors
 *.bin
 .cache/
 dl8b.log
+*.pt
+results/*.log
