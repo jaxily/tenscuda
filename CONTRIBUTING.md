@@ -17,6 +17,18 @@ reference. If tokens differ, include the matching prefix length and logits/hidde
 you can, not just "it generated text". Any quantized variant must run in a **fresh process** (the
 TT-XLA graph cache may reuse the first weight dtype).
 
+## Benchmark results
+
+```bash
+python -m tenscuda bench --model <key>          # see --list; add --quick for a short run
+```
+
+Review the printed JSON, then either paste it into a **Benchmark result** issue or open a PR adding
+the file, unedited, to `benchmarks/results/` (name it `<model>-<card>-<date>.json`). Run
+`python scripts/build_leaderboard.py` to regenerate `docs/LEADERBOARD.md`; `--check` validates
+the files. Please submit only runs without accelerator faults or thermal warnings, with no other
+jobs on the card. Note anything non-default in the issue.
+
 ## Bug reports
 
 Include the card and host specs, OS, KMD/firmware versions, Python and torch/torch-xla/pjrt-plugin-tt

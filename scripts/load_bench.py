@@ -6,16 +6,17 @@ MODE hf     = from_pretrained(...).cuda()  (stages the whole model in host RAM)
 WEIGHT_DTYPE = bfp_bf8 | bfp_bf4 (tt_torch weight_dtype_override on decoder Linear weights)
 Writes results/load_<model>_<mode>[_<wdt>].json
 """
-import json, sys, time
+import json, os, sys, time
 import torch
 import tenscuda
-from tenscuda.loader import load_causal_lm, peak_rss_gib
+from tenscuda.loader import RssMonitor, load_causal_lm, peak_rss_gib
 from tenscuda.generate import static_greedy_generate
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch_xla.debug.metrics as met
 
 mid, mode, n = sys.argv[1], sys.argv[2], int(sys.argv[3])
 wdt = sys.argv[4] if len(sys.argv) > 4 else None
+mon = RssMonitor()
 base = peak_rss_gib()
 t = time.time()
 if mode == "stream":
@@ -42,12 +43,28 @@ for r in range(4):
     runs.append({"run": r, "total_s": round(total, 2), "prefill_s": round(st["step_seconds"][0], 3),
                  "decode_tok_per_s": round(len(dec) / sum(dec), 2), "tokens": o[0, ids.shape[1]:].cpu().tolist()})
     print(json.dumps({k: v for k, v in runs[-1].items() if k != "tokens"}), flush=True)
+teacher = None
+ref_path = os.environ.get("TENSCUDA_TEACHER")
+if ref_path and os.path.exists(ref_path):
+    # Teacher-forced check: one forward over prompt + the CPU reference tokens; at every
+    # generated position, does TT's argmax equal the CPU's greedy token?
+    ref = json.load(open(ref_path))
+    seq = torch.cat([ids, torch.tensor([ref["tokens"]])], 1)
+    with torch.no_grad():
+        lg = m(input_ids=seq.to(tenscuda.device), use_cache=False).logits[0, ids.shape[1] - 1:-1].float()
+        top = lg.topk(2, dim=-1)
+        am, tm = top.indices[:, 0].cpu().tolist(), (top.values[:, 0] - top.values[:, 1]).cpu().tolist()
+    dis = [i for i, (x, y) in enumerate(zip(am, ref["tokens"])) if x != y]
+    teacher = {"agree": len(am) - len(dis), "total": len(am), "disagree_steps": dis,
+               "cpu_margin_at_disagree": [ref["margins"][i] for i in dis],
+               "tt_margin_at_disagree": [round(tm[i], 4) for i in dis]}
+    print("TEACHER", json.dumps(teacher), flush=True)
 cm = met.metric_data("CompileTime")
 res = {"model": mid, "mode": mode, "weight_dtype": wdt, "n_overridden": len(applied),
        "load_s": round(load_s, 1), "peak_rss_gib_baseline": round(base, 2),
-       "peak_rss_gib_after_load": round(rss_after_load, 2), "peak_rss_gib_end": round(peak_rss_gib(), 2),
+       "peak_rss_gib_after_load": round(rss_after_load, 2), "peak_rss_gib_end": round(peak_rss_gib(), 2), "peak_anon_rss_gib": mon.stop(), "peak_file_rss_gib": round(mon.peak_file, 2),
        "xla_compiles": cm[0] if cm else 0, "xla_compile_s": round(cm[1] / 1e9, 1) if cm else 0,
-       "cpu_fallback_ops": sorted(met.executed_fallback_ops()), "runs": runs,
+       "cpu_fallback_ops": sorted(met.executed_fallback_ops()), "teacher_forced": teacher, "runs": runs,
        "text": tok.decode(runs[-1]["tokens"], skip_special_tokens=True)}
 print(json.dumps({k: v for k, v in res.items() if k != "runs"}), flush=True)
 tag = f"_{wdt}" if wdt else ""

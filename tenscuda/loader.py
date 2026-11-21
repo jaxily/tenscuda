@@ -120,3 +120,41 @@ def peak_rss_gib() -> float:
             if line.startswith("VmHWM:"):
                 return int(line.split()[1]) / 2**20
     return float("nan")
+
+
+def _status_gib(field: str) -> float:
+    with open("/proc/self/status") as fh:
+        for line in fh:
+            if line.startswith(field + ":"):
+                return int(line.split()[1]) / 2**20
+    return float("nan")
+
+
+class RssMonitor:
+    """Peak *anonymous* host memory (RssAnon), sampled every ``interval`` seconds.
+
+    VmHWM (``peak_rss_gib``) also counts file-backed pages. torch-xla keeps the CPU tensors
+    handed to ``.to(device)`` alive until the plugin reads them, so the mmapped safetensors
+    shards are paged in (as reclaimable page cache) during the first execution. That shows
+    up in VmHWM as roughly the checkpoint size, but it's not memory the kernel can't reclaim.
+    RssAnon is the number that decides whether a model fits in host RAM.
+    """
+
+    def __init__(self, interval: float = 0.01):
+        import threading
+
+        self.interval, self.peak_anon, self.peak_file = interval, 0.0, 0.0
+        self._stop = threading.Event()
+        self._t = threading.Thread(target=self._run, daemon=True)
+        self._t.start()
+
+    def _run(self):
+        while not self._stop.is_set():
+            self.peak_anon = max(self.peak_anon, _status_gib("RssAnon"))
+            self.peak_file = max(self.peak_file, _status_gib("RssFile"))
+            self._stop.wait(self.interval)
+
+    def stop(self):
+        self._stop.set()
+        self._t.join(timeout=1)
+        return round(self.peak_anon, 2)

@@ -1,0 +1,33 @@
+name: Benchmark result
+description: Share a `python -m tenscuda bench` result for the leaderboard.
+title: "[Bench] <model> on <card> — <warm tok/s> tok/s"
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Run `python -m tenscuda bench --model <key>` (add `--quick` for a short run). It prints the exact
+        JSON before writing it. Nothing is uploaded automatically. Hostnames, usernames, paths and IPs are
+        stripped by default; please look it over before pasting.
+  - type: textarea
+    id: json
+    attributes:
+      label: Result JSON
+      description: Paste the whole file, unedited.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything unusual, such as cooling, other jobs on the host, or a non-default environment variable.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I reviewed the JSON and it contains nothing I don't want public.
+          required: true
+        - label: The card showed no faults or thermal warnings during the run.
+          required: true

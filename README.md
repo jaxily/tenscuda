@@ -146,6 +146,27 @@ flowchart TD
 Per-model status, parity, speed, compile time and memory are in **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)**.
 Add a model with one command: `python scripts/matrix.py <hf-model-id>`.
 
+## Benchmark your card
+
+A speedtest-style standard benchmark: fixed prompt, 32 new tokens, greedy decoding, seed 0,
+bf16 weights, 1 cold + 3 warm runs, plus a CPU parity check.
+
+```bash
+python -m tenscuda bench                       # SmolLM2-135M (default)
+python -m tenscuda bench --model tinyllama --quick
+python -m tenscuda bench --list                # standard models
+```
+
+It prints a summary card with warm tok/s, first-run and compile time, first-token latency,
+CPU parity (pass, near-tie or fail), peak host RAM, card temperature and power, and the detected
+config (card, firmware, KMD, pjrt-plugin-tt, torch, CPU, RAM, OS, TensCUDA commit).
+
+**Nothing is uploaded.** The result JSON (schema `tenscuda-bench/1`) has hostnames, usernames,
+paths and IP addresses removed. It's printed in full, then written only after you confirm (or pass
+`--yes`). To share it, paste it into a [Benchmark result](https://github.com/jaxily/tenscuda/issues/new?template=benchmark-result.yml)
+issue, or open a PR adding it to `benchmarks/results/`. The [leaderboard](docs/LEADERBOARD.md) is
+generated from those files by `python scripts/build_leaderboard.py`.
+
 ## Honest limits
 
 - **Slower than the CPU on tiny models.** Decoding is host-bound: torch-xla re-traces the
