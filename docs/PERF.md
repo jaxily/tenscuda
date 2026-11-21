@@ -77,7 +77,7 @@ flip was rounding plus the fused-softmax error, not a broken op.
 | `torch.compile(backend="openxla")` | 2.62 / 2.60 / 2.61 | 130 s | **wrong** | no |
 
 Learnings:
-- **Host-bound.** A py-spy profile of steady decode puts about 94% of the time in Python/torch-xla
+- **Host-bound (revised; see the measured trace/sync split below).** A py-spy profile of steady decode puts about 94% of the time in Python/torch-xla
   tracing of the HF model (tt_torch's TorchFunctionOverride, TensCUDA's mode, einsum, rotary,
   HF wrappers). Only about 6% is in `torch_xla.sync` (device execute + wait). Reading the token
   back each step isn't the bottleneck, so device residency alone gains nothing.
