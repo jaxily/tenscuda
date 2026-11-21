@@ -1,0 +1,17 @@
+.venv/
+.wheels/
+__pycache__/
+*.pyc
+*.log
+dl.log
+install.log
+generated/
+.api_key
+# quantization results are unverified (see docs/PERF.md section 7)
+results/*bfp*
+results/quant_*
+results/prof_*
+*.safetensors
+*.bin
+.cache/
+dl8b.log

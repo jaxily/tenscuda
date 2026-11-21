@@ -1,0 +1,262 @@
+{
+ "compile_options": {
+  "math_fidelity": "hifi4",
+  "fp32_dest_acc_en": "true"
+ },
+ "ops": [
+  {
+   "op": "matmul_256x384x192",
+   "dtype": "float32",
+   "seconds_incl_compile": 4.06,
+   "max_abs": 0.1073455810546875,
+   "max_rel": 2.1939914226531982,
+   "rel_l2": 0.0011739921756088734
+  },
+  {
+   "op": "linear_4x256x512->1024",
+   "dtype": "float32",
+   "seconds_incl_compile": 4.23,
+   "max_abs": 0.010168075561523438,
+   "max_rel": 0.47433266043663025,
+   "rel_l2": 0.0010986262932419777
+  },
+  {
+   "op": "bmm_attn_scores",
+   "dtype": "float32",
+   "seconds_incl_compile": 2.24,
+   "max_abs": 0.04781532287597656,
+   "max_rel": 1.1178781986236572,
+   "rel_l2": 0.0011673036497086287
+  },
+  {
+   "op": "layer_norm_512",
+   "dtype": "float32",
+   "seconds_incl_compile": 19.71,
+   "max_abs": 0.008287906646728516,
+   "max_rel": 0.012851513922214508,
+   "rel_l2": 0.0011832807213068008
+  },
+  {
+   "op": "rms_norm_manual_512",
+   "dtype": "float32",
+   "seconds_incl_compile": 2.02,
+   "max_abs": 0.017342090606689453,
+   "max_rel": 0.00453394977375865,
+   "rel_l2": 0.0014790021814405918
+  },
+  {
+   "op": "rms_norm_F_512",
+   "dtype": "float32",
+   "seconds_incl_compile": 0.01,
+   "max_abs": 0.017342090606689453,
+   "max_rel": 0.00453394977375865,
+   "rel_l2": 0.0014790021814405918
+  },
+  {
+   "op": "softmax_lastdim",
+   "dtype": "float32",
+   "seconds_incl_compile": 1.85,
+   "max_abs": 0.004195317625999451,
+   "max_rel": 0.06979599595069885,
+   "rel_l2": 0.022604022175073624
+  },
+  {
+   "op": "sdpa_causal_8h_64",
+   "dtype": "float32",
+   "seconds_incl_compile": 1.45,
+   "max_abs": 0.08598065376281738,
+   "max_rel": 2.0998575687408447,
+   "rel_l2": 0.02462538331747055
+  },
+  {
+   "op": "silu",
+   "dtype": "float32",
+   "seconds_incl_compile": 0.04,
+   "max_abs": 4.76837158203125e-07,
+   "max_rel": 2.570294554971042e-07,
+   "rel_l2": 5.588870877204499e-08
+  },
+  {
+   "op": "gelu_tanh",
+   "dtype": "float32",
+   "seconds_incl_compile": 1.2,
+   "max_abs": 0.0004737377166748047,
+   "max_rel": 0.04714430123567581,
+   "rel_l2": 0.00019767001504078507
+  },
+  {
+   "op": "exp",
+   "dtype": "float32",
+   "seconds_incl_compile": 1.09,
+   "max_abs": 7.62939453125e-06,
+   "max_rel": 1.190861240729646e-07,
+   "rel_l2": 2.5647487689184345e-08
+  },
+  {
+   "op": "embedding_gather",
+   "dtype": "float32",
+   "seconds_incl_compile": 4.41,
+   "max_abs": 0.007810354232788086,
+   "max_rel": 0.0038730506785213947,
+   "rel_l2": 0.0016510578570887446
+  },
+  {
+   "op": "cumsum",
+   "dtype": "float32",
+   "seconds_incl_compile": 3.62,
+   "max_abs": 4.57763671875e-05,
+   "max_rel": 0.0011417560745030642,
+   "rel_l2": 3.4053391573252156e-07
+  },
+  {
+   "op": "argmax",
+   "dtype": "float32",
+   "seconds_incl_compile": 2.91,
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "rel_l2": 0.0
+  },
+  {
+   "op": "matmul_256x384x192",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 4.03,
+   "max_abs": 0.253082275390625,
+   "max_rel": 0.872421383857727,
+   "rel_l2": 0.0016960679786279798
+  },
+  {
+   "op": "linear_4x256x512->1024",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 4.3,
+   "max_abs": 0.017477035522460938,
+   "max_rel": 0.16388435661792755,
+   "rel_l2": 0.0016860633622854948
+  },
+  {
+   "op": "bmm_attn_scores",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 2.23,
+   "max_abs": 0.09279632568359375,
+   "max_rel": 0.4053712487220764,
+   "rel_l2": 0.001688315300270915
+  },
+  {
+   "op": "layer_norm_512",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 16.4,
+   "max_abs": 0.03443646430969238,
+   "max_rel": 0.04161057248711586,
+   "rel_l2": 0.003291041124612093
+  },
+  {
+   "op": "rms_norm_manual_512",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 2.05,
+   "max_abs": 0.019286155700683594,
+   "max_rel": 0.0061804745346307755,
+   "rel_l2": 0.0019099792698398232
+  },
+  {
+   "op": "rms_norm_F_512",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 0.04,
+   "max_abs": 0.019286155700683594,
+   "max_rel": 0.0061804745346307755,
+   "rel_l2": 0.0019099792698398232
+  },
+  {
+   "op": "softmax_lastdim",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 1.9,
+   "max_abs": 0.006141841411590576,
+   "max_rel": 0.0745740681886673,
+   "rel_l2": 0.023000428453087807
+  },
+  {
+   "op": "sdpa_causal_8h_64",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 0.14,
+   "max_abs": 0.09375,
+   "max_rel": 2.012939214706421,
+   "rel_l2": 0.024134323000907898
+  },
+  {
+   "op": "silu",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 0.03,
+   "max_abs": 0.013651847839355469,
+   "max_rel": 0.00537883210927248,
+   "rel_l2": 0.001782736275345087
+  },
+  {
+   "op": "gelu_tanh",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 1.54,
+   "max_abs": 0.008238554000854492,
+   "max_rel": 0.04745449125766754,
+   "rel_l2": 0.001744352513924241
+  },
+  {
+   "op": "exp",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 1.02,
+   "max_abs": 0.25240325927734375,
+   "max_rel": 0.005738584324717522,
+   "rel_l2": 0.001955196028575301
+  },
+  {
+   "op": "embedding_gather",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 0.03,
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "rel_l2": 0.0
+  },
+  {
+   "op": "cumsum",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 3.46,
+   "max_abs": 0.249908447265625,
+   "max_rel": 0.0038910505827516317,
+   "rel_l2": 0.0016573346219956875
+  },
+  {
+   "op": "argmax",
+   "dtype": "bfloat16",
+   "seconds_incl_compile": 0.92,
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "rel_l2": 0.0
+  },
+  {
+   "op": "h2d_d2h_roundtrip_1Mi",
+   "dtype": "float32",
+   "bit_exact": true,
+   "h2d_s": 0.0004,
+   "d2h_s": 0.004
+  },
+  {
+   "op": "h2d_d2h_roundtrip_1Mi",
+   "dtype": "bfloat16",
+   "bit_exact": true,
+   "h2d_s": 0.0004,
+   "d2h_s": 0.0007
+  },
+  {
+   "op": "h2d_d2h_roundtrip_1Mi",
+   "dtype": "int32",
+   "bit_exact": true,
+   "h2d_s": 0.0004,
+   "d2h_s": 0.0027
+  },
+  {
+   "op": "h2d_d2h_roundtrip_1Mi",
+   "dtype": "int64",
+   "bit_exact": true,
+   "h2d_s": 0.0019,
+   "d2h_s": 0.006
+  }
+ ],
+ "cpu_fallback_ops": [],
+ "xla_compiles": 27
+}
