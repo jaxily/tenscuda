@@ -1,36 +1,36 @@
-# TensCUDA
+<p align="center">
+  <img src="docs/assets/banner.jpg" alt="TensCUDA banner" width="100%">
+</p>
 
-**Run unmodified PyTorch `.cuda()` scripts on Tenstorrent Blackhole cards via TT-XLA.**
+<h1 align="center">TensCUDA</h1>
 
-> **Status: EARLY / EXPERIMENTAL.** It works for the small Llama-family models listed
-> below and has been tested on one machine. Expect rough edges.
+<p align="center"><b>Run unmodified PyTorch <code>.cuda()</code> scripts on Tenstorrent Blackhole cards via TT-XLA.</b></p>
 
-TensCUDA is a small Python package. When you `import tenscuda`, PyTorch's CUDA device
-API (`torch.cuda.is_available()`, `.cuda()`, `.to("cuda")`, `torch.device("cuda")`,
-`device="cuda"` factory kwargs, `torch.cuda.synchronize()` and so on) is redirected to the
-Tenstorrent device exposed by [TT-XLA](https://github.com/tenstorrent/tt-xla)
-(torch-xla + the `pjrt-plugin-tt` PJRT plugin). TT-XLA compiles the resulting graphs
-for the card.
+<p align="center">
+  <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg"></a>
+  <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-3776AB.svg?logo=python&logoColor=white">
+  <img alt="Status: experimental" src="https://img.shields.io/badge/status-experimental-orange.svg">
+  <img alt="Hardware: Tenstorrent Blackhole P150" src="https://img.shields.io/badge/hardware-Tenstorrent%20Blackhole%20P150-6f42c1.svg">
+</p>
 
-It does **not** translate CUDA kernels. Code that ships its own CUDA kernels won't run.
+> **Status: EARLY / EXPERIMENTAL.** It works for the small Llama-family models listed below and has been
+> tested on one machine. Expect rough edges.
 
-## Why this exists
+## Why
 
-Most AI code assumes CUDA, and porting it is the main barrier to running it on new
-accelerators. TensCUDA lets device-level CUDA code (`.cuda()`, `device="cuda"`) run on
-Tenstorrent cards unchanged, records honestly what works in a
-[compatibility matrix](docs/COMPATIBILITY.md), and feeds the gaps it finds back upstream. The
-goals, milestones (with targets clearly marked as targets) and non-goals are in
+Most AI code assumes CUDA, and porting cost is the barrier TensCUDA aims to remove first.
+PyTorch is where AI developers and models live: over 150,000 developers and 18,000 organizations work
+with it ([PyTorch Foundation](https://pytorch.org/event/webinar-pytorch-a-foundation-for-open-source-ai-ml/)),
+and over 70% of AI research implementations use it ([2024 review](https://pytorch.org/blog/2024-year-in-review/)).
+Much GPU-targeted PyTorch code uses `.cuda()` and `device="cuda"`. One adapter that runs that
+code unchanged opens the door to those users and models on Tenstorrent hardware, without porting each model.
+The full business case, goals, milestones (clearly marked as targets) and non-goals are in
 **[docs/VISION.md](docs/VISION.md)**.
 
-## Tested on
-
-| | |
-|---|---|
-| Card | Tenstorrent Blackhole P150a (one card) |
-| Host | Ubuntu 24.04, 4-core Intel i7-6700, 8 GB RAM, PCIe 3.0 x16 |
-| System stack | tt-metal v0.82, KMD 2.11.0, firmware bundle 18.10.0 |
-| Python stack | Python 3.12, torch 2.11.0+cpu, torch-xla 2.9.0 (TT build), pjrt-plugin-tt 1.5.0.dev20260831, transformers 5.17.0 |
+TensCUDA is a small Python package. When you `import tenscuda`, PyTorch's CUDA device API
+(`torch.cuda.is_available()`, `.cuda()`, `.to("cuda")`, `torch.device("cuda")`, `device="cuda"`
+factory kwargs, `torch.cuda.synchronize()`, ...) is redirected to the Tenstorrent device exposed by
+[TT-XLA](https://github.com/tenstorrent/tt-xla). It does **not** translate CUDA kernels.
 
 ## Quickstart
 
@@ -79,11 +79,20 @@ from tenscuda.loader import load_causal_lm
 model = load_causal_lm("TinyLlama/TinyLlama-1.1B-Chat-v1.0")   # meta skeleton + per-tensor upload
 ```
 
+## Tested on
+
+| | |
+|---|---|
+| Card | Tenstorrent Blackhole P150a (one card) |
+| Host | Ubuntu 24.04, 4-core Intel i7-6700, 8 GB RAM, PCIe 3.0 x16 |
+| System stack | tt-metal v0.82, KMD 2.11.0, firmware bundle 18.10.0 |
+| Python stack | Python 3.12, torch 2.11.0+cpu, torch-xla 2.9.0 (TT build), pjrt-plugin-tt 1.5.0.dev20260831, transformers 5.17.0 |
+
 ## Results (measured, one P150a)
 
 Greedy decoding, chat prompt "Explain in two sentences why the sky is blue." (40-46 prompt
 tokens), 32 new tokens. "Warm" is after the first run has compiled. Full details are in
-[docs/PERF.md](docs/PERF.md); per-model status is in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+[docs/PERF.md](docs/PERF.md).
 
 | Model | dtype | Tokens vs CPU | TT warm decode | TT first run (incl. compile) | CPU (same host) |
 |---|---|---|---|---|---|
@@ -106,6 +115,18 @@ Other checks (all in `tests/`, 18 passing on the P150a):
 - Ops without an XLA lowering run on the CPU. For example, `torch.unique` and `torch.nonzero` run as
   `aten::_unique2` and `aten::nonzero` fallbacks.
 
+## How it works
+
+```mermaid
+flowchart TD
+    A["Unmodified PyTorch script<br/>.cuda() / device='cuda' / torch.cuda.*"] --> B["tenscuda patch layer<br/>device mapping, accurate softmax/SDPA,<br/>static-KV-cache greedy decode"]
+    B --> C["torch-xla lazy tensors + TT-XLA<br/>PJRT plugin (pjrt-plugin-tt)"]
+    C --> D["TT-MLIR compiler -> ttnn / tt-metal kernels"]
+    D --> E["Tenstorrent Blackhole P150<br/>(32 GB GDDR6)"]
+    L["tenscuda.loader<br/>streaming safetensors (mmap, one tensor at a time)"] -->|"weights straight to device DRAM"| E
+    B -. "ops with no XLA lowering" .-> F["CPU fallback (aten)"]
+```
+
 ## What TensCUDA fixes beyond device mapping
 
 - **Accurate softmax/attention.** On this stack the fused TT softmax has about 2.3e-2 relative
@@ -119,6 +140,11 @@ Other checks (all in `tests/`, 18 passing on the P150a):
 - **Compile options.** HiFi4 math with fp32 accumulation is the default
   (`TENSCUDA_MATH_FIDELITY`, `TENSCUDA_FP32_ACC`).
 - `fp16` is mapped to `bf16` on the device (`TENSCUDA_FP16_TO_BF16=0` to disable).
+
+## Compatibility matrix
+
+Per-model status, parity, speed, compile time and memory are in **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)**.
+Add a model with one command: `python scripts/matrix.py <hf-model-id>`.
 
 ## Honest limits
 
@@ -154,6 +180,11 @@ python scripts/op_parity.py      # per-op error table -> results/op_parity.json
 4. Sampling (top-k/top-p) on the fast path.
 5. Two-card (2x P150) model splitting.
 6. Encoder (BERT-style) and vision model coverage.
+
+## Contributing
+
+Compatibility reports, bug reports and PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the
+"Model compatibility report" issue template. Every number in this repo has to come from a committed measurement.
 
 ## License
 

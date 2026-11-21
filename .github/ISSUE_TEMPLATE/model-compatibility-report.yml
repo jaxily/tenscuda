@@ -1,0 +1,58 @@
+name: Model compatibility report
+description: Report a model that works, partially works, or fails on TensCUDA.
+title: "[Model] <HF model ID> — works / partial / fails"
+labels: []
+body:
+  - type: input
+    id: model
+    attributes:
+      label: Model ID and revision
+      placeholder: TinyLlama/TinyLlama-1.1B-Chat-v1.0 @ revision
+    validations:
+      required: true
+  - type: dropdown
+    id: status
+    attributes:
+      label: Status
+      options:
+        - Works (CPU parity verified)
+        - Runs, but parity not checked
+        - Partial (diverges or some features fail)
+        - Fails
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Hardware and software
+      description: Card(s), host CPU and RAM, OS, KMD/firmware, Python, torch, torch-xla, pjrt-plugin-tt, transformers, TensCUDA commit.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduce
+      description: Exact command and minimal script (or scripts/matrix.py invocation). No private prompts, keys, hostnames or IP addresses.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results
+      description: Token parity (matching prefix/total), logits error if available, first-run time, 3 warm tok/s repeats, host RSS, device memory (if measured), CPU fallback ops. Attach results JSON.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error / logs (scrub private data first)
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I scrubbed keys, tokens, private prompts, hostnames, IPs and private paths from the report.
+          required: true
+        - label: If testing quantization, each weight dtype ran in a fresh process.
