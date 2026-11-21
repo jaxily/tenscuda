@@ -140,3 +140,26 @@ streaming loader). Logits are teacher-forced against CPU fp32 over prompt + 32 t
 - **Device memory saving is unmeasured.** `xm.get_memory_info` returns UNIMPLEMENTED, and the
   conversion is a typecast inside the compiled graph, so the bf16 originals may stay resident.
   Until device DRAM can be measured, don't count on bfp to fit bigger models.
+
+## Host trace vs sync/execute split (SmolLM2-135M, bf16, StaticCache, 32 warm decode steps)
+
+`scripts/trace_cost.py` times each decode step: the Python forward (lazy-tensor tracing to IR) separately
+from `torch_xla.sync()` + token readback (graph hash/lookup, transfer, device execution, wait).
+Steps 9 to 40 are averaged, with compiled graphs cached.
+
+| Config | Trace ms/step | Sync+exec ms/step | Tokens vs CPU fp32 |
+|---|---|---|---|
+| default (TensCUDA mode + tt-torch overrides) | 102.8 | 177.6 | match (first 32) |
+| tt-torch overrides off | 92.9 | 163.2 | diverge at index 2 |
+| all torch-function modes off | 75.3 | 164.7 | diverge at index 2 |
+
+Learnings:
+- **This corrects the earlier estimate that ~94% of time is Python tracing.** Direct timing shows tracing
+  at about 35 to 37% of a ~280 ms step, with sync/execute at about 60 to 65%. Both need work.
+- The torch-function modes cost about 27 ms/step (~10%). This test needs the accuracy-preserving softmax
+  override path for parity, so it stays on by default.
+- The sync part (about 165 to 178 ms for a 135M model) suggests per-graph launch and transfer overhead
+  dominates, not FLOPs. The main targets remain graph replay / trace capture and fewer host-device
+  round trips. Native kernel swaps alone will not fix it.
+- Raw logs are not committed because they contain machine-specific driver output. The summary is
+  `results/trace_cost_SmolLM2-135M.jsonl`.
