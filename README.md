@@ -14,6 +14,15 @@ for the card.
 
 It does **not** translate CUDA kernels. Code that ships its own CUDA kernels won't run.
 
+## Why this exists
+
+Most AI code assumes CUDA, and porting it is the main barrier to running it on new
+accelerators. TensCUDA lets device-level CUDA code (`.cuda()`, `device="cuda"`) run on
+Tenstorrent cards unchanged, records honestly what works in a
+[compatibility matrix](docs/COMPATIBILITY.md), and feeds the gaps it finds back upstream. The
+goals, milestones (with targets clearly marked as targets) and non-goals are in
+**[docs/VISION.md](docs/VISION.md)**.
+
 ## Tested on
 
 | | |
