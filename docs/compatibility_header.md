@@ -16,3 +16,4 @@ batch 1, the chat prompt "Explain in two sentences why the sky is blue." and 32 
 - **first run s**: the first generate call, including TT-MLIR compilation.
 - **peak host RSS**: process VmHWM after loading weights, and at the end.
 - **CPU tok/s**: the CPU reference's decode speed on the same host (4 threads), for scale.
+- **M4 pause Δ%**: only when the row was measured with `python scripts/matrix.py MODEL --pause-benchmark` (``TENSCUDA_DECODE_PAUSE_MODES=1`` vs default replay probe).

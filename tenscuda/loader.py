@@ -104,26 +104,61 @@ def load_causal_lm(model_id: str, dtype=torch.bfloat16, device=None, verbose=Tru
     loaded, nbytes = set(), 0
     import torch_xla
 
+    prefetch = os.environ.get("TENSCUDA_LOADER_PREFETCH", "0") == "1"
+
+    def _read_tensor(sf, key):
+        t = sf.get_tensor(key)
+        if t.is_floating_point():
+            t = t.to(dtype)
+        return t
+
+    def _upload(target, t_cpu):
+        nonlocal nbytes
+        dev_t = t_cpu.to(device)
+        nbytes += t_cpu.numel() * t_cpu.element_size()
+        mod_name, _, leaf = target.rpartition(".")
+        mod = model.get_submodule(mod_name) if mod_name else model
+        if target in params:
+            mod._parameters[leaf] = torch.nn.Parameter(dev_t, requires_grad=False)
+        else:
+            mod._buffers[leaf] = dev_t
+        loaded.add(target)
+        del t_cpu
+
     for f in files:
         with safe_open(f, framework="pt") as sf:
-            for key in sf.keys():
-                target = key if key in params or key in bufs else None
-                if target is None:
+            pending = [
+                key for key in sf.keys()
+                if key in params or key in bufs
+            ]
+            if not prefetch:
+                for key in pending:
+                    _upload(key, _read_tensor(sf, key))
+                torch_xla.sync()
+                continue
+
+            from concurrent.futures import ThreadPoolExecutor
+
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                it = iter(pending)
+                try:
+                    key = next(it)
+                except StopIteration:
                     continue
-                t = sf.get_tensor(key)
-                if t.is_floating_point():
-                    t = t.to(dtype)
-                dev_t = t.to(device)
-                nbytes += t.numel() * t.element_size()
-                del t
-                mod_name, _, leaf = target.rpartition(".")
-                mod = model.get_submodule(mod_name) if mod_name else model
-                if target in params:
-                    mod._parameters[leaf] = torch.nn.Parameter(dev_t, requires_grad=False)
-                else:
-                    mod._buffers[leaf] = dev_t
-                loaded.add(target)
-        torch_xla.sync()
+                future = pool.submit(_read_tensor, sf, key)
+                while True:
+                    t_cpu = future.result()
+                    try:
+                        nkey = next(it)
+                        nfuture = pool.submit(_read_tensor, sf, nkey)
+                    except StopIteration:
+                        nfuture = None
+                    _upload(key, t_cpu)
+                    torch_xla.sync()
+                    if nfuture is None:
+                        break
+                    key = nkey
+                    future = nfuture
     if getattr(config, "tie_word_embeddings", False) or getattr(
             getattr(config, "get_text_config", lambda: config)(), "tie_word_embeddings", False):
         model.tie_weights()

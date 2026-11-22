@@ -153,6 +153,26 @@ The `torch.cuda.*` shim surface (Y / STUB / N) is in **[docs/API_COMPATIBILITY.m
 Set `TENSCUDA_MIGRATION_LOG=1` for an exit summary of mapped vs stub API touches.
 Add a model with one command: `python scripts/matrix.py <hf-model-id>`.
 
+## M4 benchmark environment (decode speed)
+
+Default generate keeps full torch-function modes for parity. For **measured decode speed** on a
+P150 (validated on SmolLM2, TinyLlama, Llama-3.2-1B — see [docs/DAY_REPORT_2026-11-22.md](docs/DAY_REPORT_2026-11-22.md)):
+
+```bash
+# A/B table (3 models or one model id)
+PYTHONPATH=. .venv/bin/python scripts/m4_pause_compare.py
+
+# Single-model probe (writes results/m4_replay_probe_<slug>_pause.json)
+TENSCUDA_DECODE_PAUSE_MODES=1 PYTHONPATH=. .venv/bin/python scripts/m4_replay_probe.py \
+  HuggingFaceTB/SmolLM2-135M-Instruct 32
+```
+
+Optional thin forward (`TENSCUDA_THIN_DECODE=1`) and loader CPU prefetch (`TENSCUDA_LOADER_PREFETCH=1`)
+are experimental — run `scripts/m4_pause_parity_gate.py` after changes. Shape buckets and JIT cache:
+[docs/COMPILE_AND_SHAPES.md](docs/COMPILE_AND_SHAPES.md). Host records: [docs/HARDWARE_BASELINE.md](docs/HARDWARE_BASELINE.md).
+
+Matrix rows can record pause delta: `python scripts/matrix.py MODEL --pause-benchmark`.
+
 ## Benchmark your card
 
 A speedtest-style standard benchmark: fixed prompt, 32 new tokens, greedy decoding, seed 0,

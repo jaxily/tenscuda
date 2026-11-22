@@ -23,7 +23,7 @@ PY = sys.executable
 MDIR = os.path.join(ROOT, "results", "matrix")
 DOC = os.path.join(ROOT, "docs", "COMPATIBILITY.md")
 COLS = ["model", "params", "arch", "status", "parity vs CPU", "warm tok/s (TT)", "first run s",
-        "peak host RSS (TT)", "CPU tok/s", "notes"]
+        "peak host RSS (TT)", "CPU tok/s", "M4 pause Δ%", "notes"]
 
 
 def _mem_available_gib():
@@ -57,6 +57,31 @@ def last_error(log):
         if any(k in l for k in ("Error", "error:", "Exception", "Killed", "TT_THROW", "FATAL")):
             return l[:220]
     return lines[-1][:220] if lines else "empty log"
+
+
+def _pause_benchmark(model: str, log: str, timeout: int) -> dict | None:
+    """Subprocess A/B replay (parent must not import tenscuda)."""
+    import glob as g
+
+    rc = run(
+        [PY, "scripts/m4_pause_compare.py", model],
+        log,
+        timeout,
+    )
+    if rc != 0:
+        return {"error": f"rc={rc}"}
+    files = sorted(g.glob(os.path.join(ROOT, "results", "m4_pause_compare_*.json")))
+    if not files:
+        return {"error": "no json"}
+    data = json.load(open(files[-1]))
+    row = next((c for c in data.get("comparisons", []) if c.get("model") == model), None)
+    if not row:
+        return {"error": "model not in compare json"}
+    return {
+        "baseline_ms": row.get("baseline_mean_decode_ms"),
+        "pause_ms": row.get("pause_mean_decode_ms"),
+        "delta_pct": row.get("delta_pct_faster"),
+    }
 
 
 def measure(a):
@@ -106,6 +131,10 @@ def measure(a):
         rec["tt"] = json.load(open(tt_json))
     else:
         rec["tt_error"] = f"rc={rc}: {last_error(log)}"
+    if a.pause_benchmark and rec.get("tt"):
+        rec["m4_pause"] = _pause_benchmark(
+            a.model, os.path.join(MDIR, f"{short}_pause.log"), a.timeout,
+        )
     json.dump(rec, open(os.path.join(MDIR, f"{short}.json"), "w"), indent=1)
     return rec
 
@@ -119,7 +148,7 @@ def row(rec, tie):
     if rec.get("cpu_error"):
         notes.append("CPU reference failed: " + rec["cpu_error"])
     if tt is None:
-        return [rec["model"], params, rec["arch"], "fails", "-", "-", "-", "-", cpu_s,
+        return [rec["model"], params, rec["arch"], "fails", "-", "-", "-", "-", cpu_s, "-",
                 "; ".join(notes + [rec.get("tt_error") or "TT run failed"]).replace("|", "/")]
     warm = [r["decode_tok_per_s"] for r in tt["runs"][1:]]
     toks = tt["runs"][-1]["tokens"]
@@ -148,10 +177,17 @@ def row(rec, tie):
         notes.append("TT runs not identical")
     notes.append(f"compile {tt['xla_compile_s']} s / {tt['xla_compiles']} graphs")
     notes.append("CPU fallbacks: " + (", ".join(tt["cpu_fallback_ops"]) or "none"))
+    pause_col = "-"
+    mp = rec.get("m4_pause")
+    if mp and mp.get("delta_pct") is not None:
+        pause_col = f"{mp['delta_pct']}% ({mp.get('pause_ms')} ms)"
+    elif mp and mp.get("error"):
+        pause_col = f"err: {mp['error'][:40]}"
     return [rec["model"], params, rec["arch"], status, parity,
             f"{sum(warm)/len(warm):.2f} ({min(warm):.2f}-{max(warm):.2f})", f"{tt['runs'][0]['total_s']:.0f}",
             (f"{tt['peak_anon_rss_gib']} GiB anon (VmHWM {tt['peak_rss_gib_end']})" if "peak_anon_rss_gib" in tt
                else f"{tt['peak_rss_gib_after_load']} load / {tt['peak_rss_gib_end']} end GiB (VmHWM)"), cpu_s,
+            pause_col,
             "; ".join(notes).replace("|", "/")]
 
 
@@ -177,6 +213,11 @@ def main():
     ap.add_argument("--timeout", type=int, default=3600)
     ap.add_argument("--cpu-timeout", type=int, default=5400)
     ap.add_argument("--render", action="store_true")
+    ap.add_argument(
+        "--pause-benchmark",
+        action="store_true",
+        help="after TT run, subprocess m4_pause_compare for this model (~5 min on P150a)",
+    )
     a = ap.parse_args()
     if a.model:
         measure(a)

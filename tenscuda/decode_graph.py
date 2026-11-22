@@ -1,14 +1,27 @@
-"""M4 B3a: optional pause of torch-function trace modes during decode only.
+"""M4 B3: decode graph helpers — pause trace modes, thin forward binding.
 
-Set ``TENSCUDA_DECODE_PAUSE_MODES=1`` to exit ``_CudaDeviceMode`` and
-``tt_torch`` overrides for the single-token decode loop (prefill keeps modes on).
-Parity must pass ``scripts/kv_diagnose.py`` before enabling by default.
+- ``TENSCUDA_DECODE_PAUSE_MODES=1`` — exit torch-function modes during decode only.
+- ``TENSCUDA_THIN_DECODE=1`` — call cached ``model.forward`` instead of ``model(...)``.
+
+Parity must pass ``scripts/kv_diagnose.py`` / ``scripts/m4_pause_parity_gate.py``.
 """
 from __future__ import annotations
 
 import os
 from contextlib import contextmanager
+from typing import Any, Callable
 from typing import Iterator
+
+
+def get_forward_fn(model: Any) -> Callable[..., Any]:
+    """B3 thin wrapper: reuse bound ``forward`` (avoids extra ``Module.__call__`` hooks)."""
+    if os.environ.get("TENSCUDA_THIN_DECODE", "0") != "1":
+        return model
+    fn = getattr(model, "_tenscuda_forward_fn", None)
+    if fn is None:
+        fn = model.forward
+        model._tenscuda_forward_fn = fn
+    return fn
 
 
 @contextmanager

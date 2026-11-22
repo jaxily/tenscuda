@@ -128,7 +128,12 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
 
     if compile is None:
         compile = os.environ.get("TENSCUDA_COMPILE", "0") == "1"
-    fwd = _compiled_forward(model) if compile else model
+    from tenscuda.decode_graph import get_forward_fn
+
+    if compile:
+        fwd = _compiled_forward(model)
+    else:
+        fwd = get_forward_fn(model)
     decode_io = _ResidentDecodeIO(dev) if os.environ.get("TENSCUDA_RESIDENT_DECODE_IO", "0") == "1" else None
     if stats is None and os.environ.get("TENSCUDA_M4_DEBUG", "0") == "1":
         stats = {}
@@ -142,7 +147,7 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
         timings.append(time.time() - t)
         out.append(nxt)
         cur = plen
-        from tenscuda.decode_graph import pause_decode_trace_modes
+        from tenscuda.decode_graph import pause_decode_trace_modes  # noqa: F811
 
         while len(out) < max_new_tokens and nxt not in eos:
             t = time.time()

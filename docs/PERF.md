@@ -315,3 +315,5 @@ Validated on decode subset (``results/m4_pause_compare_2026-11-22T181456Z.json``
 ``trace_cost`` split (SmolLM2) barely moves (~102 ms trace); wall ``m4_replay_probe`` drops — pause trims overhead outside the trace/sync buckets cProfile labels (compare ``m4_trace_profile`` **306 → 261 ms/step** wall with pause). **Recommended for benchmarks only** — not default.
 
 **B3b ``XLA_DYNAMO_DISABLE=1`` (Nov 22, measure-only):** trace 102.2 / sync 177.3 ms, tokens match; no default change.
+
+**M4+ stable roadmap (Nov 22):** [COMPILE_AND_SHAPES.md](COMPILE_AND_SHAPES.md), [HARDWARE_BASELINE.md](HARDWARE_BASELINE.md), [TT_UPSTREAM.md](TT_UPSTREAM.md). Optional decode flags: ``TENSCUDA_THIN_DECODE=1``, ``TENSCUDA_LOADER_PREFETCH=1`` (measure before claiming wins).

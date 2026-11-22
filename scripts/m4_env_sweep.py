@@ -74,6 +74,7 @@ def main() -> None:
         ("migration_log_off", {"TENSCUDA_MIGRATION_LOG": "0"}),
         ("decode_pause_modes", {"TENSCUDA_DECODE_PAUSE_MODES": "1"}),
         ("xla_dynamo_disable", {"XLA_DYNAMO_DISABLE": "1"}),
+        ("thin_decode", {"TENSCUDA_THIN_DECODE": "1"}),
     ]
     rows = []
     for name, extra in sweeps:
