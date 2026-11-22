@@ -63,6 +63,7 @@ def main() -> None:
     total_s = time.time() - t0
 
     steps = stats.get("step_seconds", [])
+    prefill_s = round(steps[0], 2) if steps else None
     decode_steps = steps[1:] if len(steps) > 1 else []
     warm_ms = [round(1000 * s, 1) for s in decode_steps]
     per_step_compiles = stats.get("xla_compiles_per_step", [])
@@ -72,7 +73,8 @@ def main() -> None:
         "n_steps": n_steps,
         "resident_decode_io": resident,
         "total_s": round(total_s, 2),
-        "step_ms": warm_ms,
+        "prefill_s": prefill_s,
+        "decode_step_ms": warm_ms,
         "mean_decode_ms_steps_2_end": round(sum(warm_ms[1:]) / max(len(warm_ms) - 1, 1), 1) if len(warm_ms) > 1 else None,
         "xla_compiles_per_decode_step": per_step_compiles,
         "xla_compiles_delta_last_step": (
