@@ -1,0 +1,8 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "config": "default",
+  "trace_ms": 102.9,
+  "sync_exec_ms": 177.3,
+  "recorded_on": "rock",
+  "note": "Phase 0 overnight baseline"
+}

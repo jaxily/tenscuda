@@ -285,3 +285,9 @@ stays at **4** after the first decode step (no per-token recompile). Steady deco
 `torch.tensor([[token]])` inputs for now.
 
 **trace_cost (Nov 22, default):** trace **101.6 ms/step**, sync+exec **177.8 ms/step** (steps 9–40).
+
+**E1b cProfile (Nov 22, `m4_trace_profile.py`, 10 warm steps after burn-in):** ~306 ms/step wall;
+cumulative Python time dominated by `tt_torch.torch_overrides.__torch_function__` and
+`tenscuda._patch._CudaDeviceMode.__torch_function__` (see `results/m4_trace_profile_SmolLM2-135M-Instruct.json`).
+Disabling either breaks parity (PERF § trace_cost configs). B3 should target graph capture without
+turning overrides off.
