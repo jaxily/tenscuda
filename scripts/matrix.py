@@ -26,13 +26,26 @@ COLS = ["model", "params", "arch", "status", "parity vs CPU", "warm tok/s (TT)",
         "peak host RSS (TT)", "CPU tok/s", "notes"]
 
 
-def run(cmd, log, timeout):
+def _mem_available_gib():
+    return int(open("/proc/meminfo").read().split("MemAvailable:")[1].split()[0]) / 2**20
+
+
+def run(cmd, log, timeout, min_avail_gib=0.6):
+    """Run a step in its own process. Kill it if host MemAvailable drops below min_avail_gib
+    (keeps the host responsive and out of deep swap); returns "lowmem" in that case."""
+    import time
+
     with open(log, "w") as fh:
-        try:
-            return subprocess.call(cmd, cwd=ROOT, stdout=fh, stderr=subprocess.STDOUT, timeout=timeout,
-                                   env={**os.environ, "PYTHONPATH": ROOT + os.pathsep + os.path.join(ROOT, "scripts")})
-        except subprocess.TimeoutExpired:
-            return "timeout"
+        p = subprocess.Popen(cmd, cwd=ROOT, stdout=fh, stderr=subprocess.STDOUT,
+                             env={**os.environ, "PYTHONPATH": ROOT + os.pathsep + os.path.join(ROOT, "scripts")})
+        t0 = time.time()
+        while p.poll() is None:
+            if time.time() - t0 > timeout:
+                p.kill(); p.wait(); return "timeout"
+            if _mem_available_gib() < min_avail_gib:
+                p.kill(); p.wait(); return "lowmem"
+            time.sleep(0.5)
+        return p.returncode
 
 
 def last_error(log):
@@ -67,14 +80,16 @@ def measure(a):
     avail = int(open("/proc/meminfo").read().split("MemAvailable:")[1].split()[0]) * 1024
     cpu_dtype = a.cpu_dtype
     if cpu_dtype == "auto":
-        cpu_dtype = ("float32" if n_params * 4 < 0.75 * avail else
-                     "bfloat16" if n_params * 2 < 0.75 * avail else "skip")
+        # bf16 checkpoints load memory-mapped (file-backed pages), so bf16 runs even when the
+        # model is bigger than free RAM; it's just slow. The low-memory watchdog in run() stops it
+        # if anonymous memory actually runs out.
+        cpu_dtype = "float32" if n_params * 4 < 0.75 * avail else "bfloat16"
     rec = {"model": a.model, "params": n_params, "arch": arch, "new_tokens": a.new_tokens,
            "cpu_dtype": cpu_dtype, "cpu": None, "tt": None, "tt_error": None}
     if cpu_dtype != "skip":
         out = os.path.join(MDIR, f"{short}_cpu_{cpu_dtype}.json")
         rc = run([PY, "scripts/cpu_ref.py", a.model, cpu_dtype, str(a.new_tokens), out],
-                 os.path.join(MDIR, f"{short}_cpu.log"), 3600)
+                 os.path.join(MDIR, f"{short}_cpu.log"), a.cpu_timeout)
         if rc == 0:
             rec["cpu"] = json.load(open(out))
         else:
@@ -101,6 +116,8 @@ def row(rec, tie):
     cpu, tt = rec.get("cpu"), rec.get("tt")
     cpu_s = f"{cpu['decode_tok_per_s']} ({rec['cpu_dtype']})" if cpu else "-"
     notes = [rec["notes"]] if rec.get("notes") else []
+    if rec.get("cpu_error"):
+        notes.append("CPU reference failed: " + rec["cpu_error"])
     if tt is None:
         return [rec["model"], params, rec["arch"], "fails", "-", "-", "-", "-", cpu_s,
                 "; ".join(notes + [rec.get("tt_error") or "TT run failed"]).replace("|", "/")]
@@ -158,6 +175,7 @@ def main():
     ap.add_argument("--cpu-dtype", default="auto")
     ap.add_argument("--tie", type=float, default=0.25, help="near-tie threshold on CPU top-2 logit margin")
     ap.add_argument("--timeout", type=int, default=3600)
+    ap.add_argument("--cpu-timeout", type=int, default=5400)
     ap.add_argument("--render", action="store_true")
     a = ap.parse_args()
     if a.model:

@@ -26,6 +26,8 @@ batch 1, the chat prompt "Explain in two sentences why the sky is blue." and 32 
 | unsloth/Llama-3.2-1B-Instruct | 1.24B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 5.95 (5.91-6.00) | 22 | 0.69 GiB anon (VmHWM 3.28) | 5.41 (bfloat16) | compile 21.7 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
 | Qwen/Qwen2.5-1.5B-Instruct | 1.54B | qwen2 | works (near-tie) | 28/32 vs CPU bfloat16; CPU top-2 margin 0.0 at step 28; teacher-forced top-1 31/32 (CPU margins 0.0) | 3.40 (3.39-3.43) | 57 | 0.59 GiB anon (VmHWM 3.76) | 2.43 (bfloat16) | compile 70.3 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
 | HuggingFaceTB/SmolLM2-1.7B-Instruct | 1.71B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 4.59 (4.57-4.62) | 41 | 0.58 GiB anon (VmHWM 3.75) | 3.7 (bfloat16) | compile 41.4 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| Qwen/Qwen2.5-3B-Instruct | 3.09B | qwen2 | works (near-tie) | 6/32 vs CPU bfloat16; CPU top-2 margin 0.0 at step 6; teacher-forced top-1 29/32 (CPU margins 0.0, 0.125, 0.125) | 2.63 (2.62-2.65) | 139 | 0.49 GiB anon (VmHWM 2.79) | 0.12 (bfloat16) | compile 112.9 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| unsloth/Llama-3.2-3B-Instruct | 3.21B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 3.52 (3.51-3.53) | 108 | 0.56 GiB anon (VmHWM 3.97) | 0.1 (bfloat16) | compile 57.5 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
 
 Notes:
 

@@ -18,6 +18,23 @@ from prompt import prompt_ids  # noqa: E402  (scripts/prompt.py)
 
 mid, dtype, n, out = sys.argv[1], getattr(torch, sys.argv[2]), int(sys.argv[3]), sys.argv[4]
 torch.set_num_threads(4)
+import threading
+_peak = {"anon": 0.0}
+
+
+def _anon():
+    for line in open("/proc/self/status"):
+        if line.startswith("RssAnon:"):
+            return int(line.split()[1]) / 2**20
+    return 0.0
+
+
+def _watch():
+    while True:
+        _peak["anon"] = max(_peak["anon"], _anon()); time.sleep(0.05)
+
+
+threading.Thread(target=_watch, daemon=True).start()
 tok = AutoTokenizer.from_pretrained(mid)
 t = time.time()
 m = AutoModelForCausalLM.from_pretrained(mid, dtype=dtype, low_cpu_mem_usage=True).eval()
@@ -50,6 +67,6 @@ def vmhwm():
 dec = steps[1:]
 json.dump({"model": mid, "dtype": sys.argv[2], "prompt_tokens": ids.shape[1], "load_s": round(load_s, 1),
            "decode_tok_per_s": round(len(dec) / sum(dec), 2) if dec else None,
-           "peak_rss_gib": round(vmhwm(), 2), "tokens": toks, "margins": margins,
+           "peak_rss_gib": round(vmhwm(), 2), "peak_anon_gib": round(_peak["anon"], 2), "tokens": toks, "margins": margins,
            "text": tok.decode(toks, skip_special_tokens=True)}, open(out, "w"), indent=1)
 print(json.dumps({"dtype": sys.argv[2], "decode_tok_per_s": round(len(dec) / sum(dec), 2), "peak_rss_gib": round(vmhwm(), 2)}))
