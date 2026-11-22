@@ -304,5 +304,14 @@ Prompt ~46 tokens + 16 decode. ``pad_to=64`` (``max_cache_len=64``) — first ru
 Default ``pad_to=64`` unchanged; set ``TENSCUDA_PAD_TO`` only for longer max_new_tokens.
 
 **B3a decode pause modes (Nov 22, opt-in ``TENSCUDA_DECODE_PAUSE_MODES=1``):**
-``kv_diagnose`` **8/8**; ``trace_cost`` tokens match baseline (trace 101.6 ms, sync 176.4 ms).
-``m4_replay_probe`` mean decode **245 ms** vs baseline **281 ms** (~13% wall). Not default — needs broader matrix smoke.
+Validated on decode subset (``results/m4_pause_compare_2026-11-22T181456Z.json``, ``m4_pause_parity_gates_2026-11-22.json``):
+
+| Model | Baseline ms/step | Pause ms/step | Δ (faster) | kv | trace_cost tokens |
+|---|---|---|---|---|---|
+| SmolLM2-135M | 282.1 | 243.2 | 13.8% | 8/8 | 32/32 identical |
+| TinyLlama-1.1B | 219.3 | 190.3 | 13.2% | 8/8 | 32/32 identical |
+| Llama-3.2-1B | 166.1 | 144.5 | 13.0% | 8/8 | 32/32 identical |
+
+``trace_cost`` split (SmolLM2) barely moves (~102 ms trace); wall ``m4_replay_probe`` drops — pause trims overhead outside the trace/sync buckets cProfile labels (compare ``m4_trace_profile`` **306 → 261 ms/step** wall with pause). **Recommended for benchmarks only** — not default.
+
+**B3b ``XLA_DYNAMO_DISABLE=1`` (Nov 22, measure-only):** trace 102.2 / sync 177.3 ms, tokens match; no default change.

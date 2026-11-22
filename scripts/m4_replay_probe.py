@@ -83,7 +83,12 @@ def main() -> None:
             else None
         ),
     }
-    out = ROOT / "results" / f"m4_replay_probe_{slug(model_id)}.json"
+    pause = __import__("os").environ.get("TENSCUDA_DECODE_PAUSE_MODES", "0") == "1"
+    name = f"m4_replay_probe_{slug(model_id)}"
+    if pause:
+        name += "_pause"
+    out = ROOT / "results" / f"{name}.json"
+    payload["decode_pause_modes"] = pause
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(payload, indent=2))

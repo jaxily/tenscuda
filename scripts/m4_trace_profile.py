@@ -108,7 +108,14 @@ def main() -> None:
         "top_cumulative_stats": top,
         "stack_tags_in_top30": _tag_hits(top),
     }
-    out = ROOT / "results" / f"m4_trace_profile_{slug(model_id)}.json"
+    import os
+
+    pause = os.environ.get("TENSCUDA_DECODE_PAUSE_MODES", "0") == "1"
+    name = f"m4_trace_profile_{slug(model_id)}"
+    if pause:
+        name += "_pause"
+    out = ROOT / "results" / f"{name}.json"
+    payload["decode_pause_modes"] = pause
     out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({k: payload[k] for k in payload if k != "top_cumulative_stats"}, indent=2))
     print("top5:")

@@ -114,7 +114,7 @@ private file paths from logs before posting them.
 | **M1** Tier-1 matrix | Done | — |
 | **M2** 3–4B (Llama-3.2-3B, Qwen2.5-3B, Phi-3.5-mini, Gemma-2-2B) | Done | Phi: greedy near-tie (teacher 31/32); document only |
 | **M3** 8B small host | Done | 32/32 vs mmap'd CPU bf16 on 8 GB host; TT anon **0.52 GiB** |
-| **M4** Graph replay + native kernels | In progress | Baselines + env/pad sweeps done; opt-in `TENSCUDA_DECODE_PAUSE_MODES=1` ~245 ms/step replay (8/8 kv) — see `docs/OVERNIGHT_REPORT_2026-11-22.md` |
+| **M4** Graph replay + native kernels | In progress | **3/3** subset ~13% decode step win with opt-in `TENSCUDA_DECODE_PAUSE_MODES=1` (8/8 kv, 32/32 tokens); run `scripts/m4_pause_compare.py` — see `docs/DAY_REPORT_2026-11-22.md` |
 | **M5–M7** Quant / encoders / multi-chip | Not started | Device memory stats blocked in PJRT |
 
 Details and targets: [docs/VISION.md](docs/VISION.md). Latest measurements: [docs/PERF.md](docs/PERF.md),

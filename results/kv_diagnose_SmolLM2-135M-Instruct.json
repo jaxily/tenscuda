@@ -35,9 +35,9 @@
   "parity_resident_vs_safe": "8/8",
   "parity_batched_vs_safe": "3/8",
   "seconds": {
-    "safe": 42.95,
-    "resident": 43.41,
-    "batched_bug": 282.87
+    "safe": 43.32,
+    "resident": 43.93,
+    "batched_bug": 284.62
   },
   "diagnosis": "StaticCache must see one torch_xla.sync() between each decode forward. Resident chunking with per-step sync should match static_greedy_generate; deferring sync across multiple forwards in one lazy graph yields wrong tokens."
 }

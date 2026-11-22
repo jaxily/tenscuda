@@ -54,7 +54,8 @@ def _replay(extra: dict[str, str]) -> dict:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    path = ROOT / "results" / f"m4_replay_probe_{_slug(MODEL)}.json"
+    suffix = "_pause" if extra.get("TENSCUDA_DECODE_PAUSE_MODES") == "1" else ""
+    path = ROOT / "results" / f"m4_replay_probe_{_slug(MODEL)}{suffix}.json"
     if path.is_file():
         return json.loads(path.read_text())
     return {"error": "missing replay json"}
@@ -71,6 +72,8 @@ def main() -> None:
         ("fp32_acc_off", {"TENSCUDA_FP32_ACC": "0"}),
         ("exact_softmax_off", {"TENSCUDA_EXACT_SOFTMAX": "0"}),
         ("migration_log_off", {"TENSCUDA_MIGRATION_LOG": "0"}),
+        ("decode_pause_modes", {"TENSCUDA_DECODE_PAUSE_MODES": "1"}),
+        ("xla_dynamo_disable", {"XLA_DYNAMO_DISABLE": "1"}),
     ]
     rows = []
     for name, extra in sweeps:
