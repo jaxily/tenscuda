@@ -25,7 +25,8 @@ and over 70% of AI research implementations use it ([2024 review](https://pytorc
 Much GPU-targeted PyTorch code uses `.cuda()` and `device="cuda"`. One adapter that runs that
 code unchanged opens the door to those users and models on Tenstorrent hardware, without porting each model.
 The full business case, goals, milestones (clearly marked as targets) and non-goals are in
-**[docs/VISION.md](docs/VISION.md)**.
+**[docs/VISION.md](docs/VISION.md)**. How the adapter is built, why those choices, tradeoffs, and how to
+vet the claims: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 TensCUDA is a small Python package. When you `import tenscuda`, PyTorch's CUDA device API
 (`torch.cuda.is_available()`, `.cuda()`, `.to("cuda")`, `torch.device("cuda")`, `device="cuda"`
