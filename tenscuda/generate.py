@@ -117,6 +117,8 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
         raise NotImplementedError("tenscuda static generate: batch size 1 only")
     if attention_mask is not None and not bool((attention_mask.detach().to("cpu") == 1).all()):
         raise NotImplementedError("tenscuda static generate: padded attention_mask not supported")
+    if v := os.environ.get("TENSCUDA_PAD_TO"):
+        pad_to = int(v)
     plen = ids_cpu.shape[1]
     max_len = -(-(plen + max_new_tokens) // pad_to) * pad_to
     cache = StaticCache(config=model.config, max_cache_len=max_len)
@@ -140,11 +142,14 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
         timings.append(time.time() - t)
         out.append(nxt)
         cur = plen
+        from tenscuda.decode_graph import pause_decode_trace_modes
+
         while len(out) < max_new_tokens and nxt not in eos:
             t = time.time()
-            logits = _forward_decode_step(
-                fwd, nxt, cur, cache, dev, decode_io=decode_io, stats=stats,
-            )
+            with pause_decode_trace_modes():
+                logits = _forward_decode_step(
+                    fwd, nxt, cur, cache, dev, decode_io=decode_io, stats=stats,
+                )
             nxt = int(logits[:, -1, :].argmax(-1).cpu())
             timings.append(time.time() - t)
             out.append(nxt)

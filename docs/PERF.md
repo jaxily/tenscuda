@@ -291,3 +291,18 @@ cumulative Python time dominated by `tt_torch.torch_overrides.__torch_function__
 `tenscuda._patch._CudaDeviceMode.__torch_function__` (see `results/m4_trace_profile_SmolLM2-135M-Instruct.json`).
 Disabling either breaks parity (PERF § trace_cost configs). B3 should target graph capture without
 turning overrides off.
+
+**E2 env sweep (Nov 22, `scripts/m4_env_sweep.py`, `results/m4_env_sweep_2026-11-22T084639Z.json`):**
+No default change. ``default`` trace 102.8 / sync 177.9 ms (tokens match baseline).
+``TENSCUDA_MATH_FIDELITY=hifi2|lofi`` diverge at token 3 (parity fail). ``TENSCUDA_FP32_ACC=0``
+and ``TENSCUDA_MIGRATION_LOG=0`` — match tokens, no meaningful ms win.
+``TENSCUDA_EXACT_SOFTMAX=0`` — ~13 ms faster sync but wrong tokens (measure-only).
+
+**E3 pad buckets (Nov 22, `m4_pad_bucket.py`, `results/m4_pad_bucket_SmolLM2-135M-Instruct.json`):**
+Prompt ~46 tokens + 16 decode. ``pad_to=64`` (``max_cache_len=64``) — first run **45.5 s**, warm **280 ms**, 4 XLA compiles.
+``128`` / ``256`` — same compile count, warm ~281 ms; ``256`` first run **56.2 s** (larger StaticCache graph).
+Default ``pad_to=64`` unchanged; set ``TENSCUDA_PAD_TO`` only for longer max_new_tokens.
+
+**B3a decode pause modes (Nov 22, opt-in ``TENSCUDA_DECODE_PAUSE_MODES=1``):**
+``kv_diagnose`` **8/8**; ``trace_cost`` tokens match baseline (trace 101.6 ms, sync 176.4 ms).
+``m4_replay_probe`` mean decode **245 ms** vs baseline **281 ms** (~13% wall). Not default — needs broader matrix smoke.
