@@ -201,7 +201,7 @@ python scripts/op_parity.py      # per-op error table -> results/op_parity.json
 
 ## Roadmap
 
-1. Graph replay for decode (no per-token Python re-trace), the main speed lever.
+1. Graph replay for decode (no per-token Python re-trace), the main speed lever — [docs/M4.md](docs/M4.md).
 2. Token parity on 8B+ without a host CPU reference; verified bfp8/bfp4 **device** memory savings.
 3. Native-kernel swaps (matmul, SDPA, RMSNorm, rotary) where TT-XLA is slow.
 4. Sampling (top-k/top-p) on the fast path.

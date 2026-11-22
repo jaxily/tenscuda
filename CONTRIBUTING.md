@@ -114,7 +114,7 @@ private file paths from logs before posting them.
 | **M1** Tier-1 matrix | Done | — |
 | **M2** 3–4B (Llama-3.2-3B, Qwen2.5-3B, Phi-3.5-mini, Gemma-2-2B) | Done | Phi: greedy near-tie (teacher 31/32); document only |
 | **M3** 8B small host | Done | 32/32 vs mmap'd CPU bf16 on 8 GB host; TT anon **0.52 GiB** |
-| **M4** Graph replay + native kernels | Not started | Main speed lever; StaticCache breaks under multi-step / `torch.compile(backend="tt")` — see `docs/PERF.md` §5 |
+| **M4** Graph replay + native kernels | In progress | Per-step sync parity proven (`scripts/kv_diagnose.py` **8/8**); next: `scripts/m4_replay_probe.py` + trace reduction — see `docs/M4.md` |
 | **M5–M7** Quant / encoders / multi-chip | Not started | Device memory stats blocked in PJRT |
 
 Details and targets: [docs/VISION.md](docs/VISION.md). Latest measurements: [docs/PERF.md](docs/PERF.md),
@@ -122,8 +122,8 @@ Details and targets: [docs/VISION.md](docs/VISION.md). Latest measurements: [doc
 
 ## Good first areas
 
-1. **M4 graph replay:** Correct decode without per-token Python re-trace (`tenscuda/resident.py`,
-   `scripts/trace_cost.py`, `scripts/diag_static_loop.py`).
+1. **M4 graph replay:** `scripts/m4_replay_probe.py`, `scripts/trace_cost.py`, optional
+   `TENSCUDA_RESIDENT_DECODE_IO=1` — see [docs/M4.md](docs/M4.md).
 3. Reproduce the matrix on other Tenstorrent cards / hosts.
 4. Device-memory introspection for the PJRT plugin (unblocks M5 memory claims).
 5. Sampling on the fixed-shape generate path.

@@ -91,6 +91,17 @@ Neuron-style **one sync per decode forward** (`tenscuda.generate._forward_decode
 decode now syncs inside the chunk loop; chunking only groups host timing, not XLA launches.
 Re-benchmark after this change: `python scripts/measure_decode_subset.py` on the P150a (writes
 `results/measure_decode_subset_*.json`).
+
+**Measured (`results/kv_diagnose_SmolLM2-135M-Instruct.json`, P150a, 8 new tokens, chunk=4):**
+
+| Path | Parity vs safe | Wall s (incl. compile) |
+|---|---|---|
+| `static_greedy_generate` | (baseline) | 43.2 |
+| Resident, per-step sync | **8/8** | 43.8 |
+| Chunked forwards, sync once per launch | **3/8** (wrong from token 3) | 285.3 |
+
+M4 prerequisite (per-step sync + KV correctness) is **verified**. Graph replay must not batch
+forwards across sync boundaries.
 - Compile cost: the first run compiles 4-5 graphs (prefill, two decode variants, small helpers).
   That takes about 23-39 s, plus the kernel JIT cache in `~/.cache/tt-metal-cache` (about 1.8 GB
   after these runs).
@@ -259,3 +270,9 @@ per-step sync (`_forward_decode_step`). Warm tok/s is mean of runs 2–4 (decode
 No parity regression expected: decode path is refactor-only (explicit prefill/decode + same sync
 boundaries). Llama-3.2-1B warm is lower than the matrix row — same host variance as other runs;
 re-run `scripts/matrix.py` if you need matrix-aligned tok/s columns.
+
+## 9. M4 experiment log
+
+See [M4.md](M4.md). Baseline probe: `scripts/m4_replay_probe.py` (records per-step ms and
+cumulative XLA compile count). Optional: `TENSCUDA_RESIDENT_DECODE_IO=1` reuses on-device
+decode input tensors.

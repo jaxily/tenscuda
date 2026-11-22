@@ -26,6 +26,25 @@ def _sync(dev=None):
     torch_xla.sync()
 
 
+def _xla_compile_count() -> int:
+    import torch_xla.debug.metrics as met
+
+    row = met.metric_data("CompileTime")
+    return int(row[0]) if row else 0
+
+
+class _ResidentDecodeIO:
+    """Fixed on-device shapes for 1-token decode (M4: fewer host tensor factories)."""
+
+    def __init__(self, dev):
+        self.step_ids = torch.zeros(1, 1, dtype=torch.long, device=dev)
+        self.step_pos = torch.zeros(1, dtype=torch.long, device=dev)
+
+    def write(self, token_id: int, cache_position: int):
+        self.step_ids[0, 0] = token_id
+        self.step_pos[0] = cache_position
+
+
 def _compiled_forward(model):
     """torch.compile(backend="tt") once per model: dynamo captures the graph, so
     later steps skip re-tracing the Python model (the lazy-tensor cost)."""
@@ -56,10 +75,24 @@ def _forward_prefill(fwd, model, input_ids, cache, dev):
     return out.logits
 
 
-def _forward_decode_step(fwd, token_id: int, cache_position: int, cache, dev):
+def _forward_decode_step(
+    fwd,
+    token_id: int,
+    cache_position: int,
+    cache,
+    dev,
+    *,
+    decode_io: _ResidentDecodeIO | None = None,
+    stats: dict | None = None,
+):
     """One decode token; must end with ``_sync()`` before the next step."""
-    step_ids = torch.tensor([[token_id]], device=dev)
-    step_pos = torch.tensor([cache_position], device=dev)
+    comp_before = _xla_compile_count() if stats is not None else None
+    if decode_io is not None:
+        decode_io.write(token_id, cache_position)
+        step_ids, step_pos = decode_io.step_ids, decode_io.step_pos
+    else:
+        step_ids = torch.tensor([[token_id]], device=dev)
+        step_pos = torch.tensor([cache_position], device=dev)
     out = fwd(
         input_ids=step_ids,
         cache_position=step_pos,
@@ -67,6 +100,10 @@ def _forward_decode_step(fwd, token_id: int, cache_position: int, cache, dev):
         use_cache=True,
     )
     _sync()
+    if stats is not None and comp_before is not None:
+        after = _xla_compile_count()
+        stats.setdefault("xla_compiles_per_step", []).append(after)
+        stats.setdefault("xla_compile_deltas", []).append(after - comp_before)
     return out.logits
 
 
@@ -90,6 +127,9 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
     if compile is None:
         compile = os.environ.get("TENSCUDA_COMPILE", "0") == "1"
     fwd = _compiled_forward(model) if compile else model
+    decode_io = _ResidentDecodeIO(dev) if os.environ.get("TENSCUDA_RESIDENT_DECODE_IO", "0") == "1" else None
+    if stats is None and os.environ.get("TENSCUDA_M4_DEBUG", "0") == "1":
+        stats = {}
 
     out = []
     timings = []
@@ -102,7 +142,9 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
         cur = plen
         while len(out) < max_new_tokens and nxt not in eos:
             t = time.time()
-            logits = _forward_decode_step(fwd, nxt, cur, cache, dev)
+            logits = _forward_decode_step(
+                fwd, nxt, cur, cache, dev, decode_io=decode_io, stats=stats,
+            )
             nxt = int(logits[:, -1, :].argmax(-1).cpu())
             timings.append(time.time() - t)
             out.append(nxt)
