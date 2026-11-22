@@ -1,0 +1,80 @@
+{
+ "schema": "tenscuda-bench/1",
+ "date": "2026-11-22T00:13:57Z",
+ "workload": {
+  "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "model_key": "tinyllama",
+  "mode": "full",
+  "new_tokens": 32,
+  "warm_runs": 3,
+  "prompt": "Explain in two sentences why the sky is blue.",
+  "prompt_tokens": 26,
+  "seed": 0,
+  "decoding": "greedy",
+  "weights": "bf16",
+  "batch": 1
+ },
+ "results": {
+  "warm_tok_per_s": 4.54,
+  "warm_tok_per_s_runs": [
+   4.55,
+   4.49,
+   4.59
+  ],
+  "first_run_s": 33.05,
+  "first_token_cold_s": 13.886,
+  "first_token_warm_s": 0.243,
+  "xla_compile_s": 22.5,
+  "xla_graphs": 5,
+  "load_s": 0.1,
+  "peak_host_rss_gib_after_load": 0.73,
+  "peak_host_rss_gib": 0.5,
+  "peak_host_vmhwm_gib": 2.87,
+  "cpu_fallback_ops": [],
+  "cpu_reference_tok_per_s": 6.11,
+  "parity": {
+   "reference": "CPU bfloat16",
+   "status": "pass",
+   "matching_prefix": 32,
+   "total": 32
+  },
+  "telemetry": {
+   "temp_c_max": 69.631,
+   "power_w_mean": 83.6,
+   "power_w_max": 102.0,
+   "samples": 55
+  },
+  "runs_identical": true
+ },
+ "config": {
+  "cards": [
+   {
+    "type": "p150a",
+    "fw_bundle": "18.10.0.0",
+    "m3_app_fw": "0.13.0.0",
+    "aiclk_mhz": "1350",
+    "pcie": "8.0 GT/s x16"
+   }
+  ],
+  "card_count": 1,
+  "kmd": "2.11.0",
+  "software": {
+   "tenscuda": "0.0.1",
+   "tenscuda_commit": "eaf6fd5",
+   "pjrt_plugin_tt": "1.5.0.dev20260831000501",
+   "torch": "2.11.0+cpu",
+   "torch_xla": "2.9.0+gited8a445",
+   "tt_lang": "1.1.5.dev20260704+light",
+   "transformers": "5.17.0",
+   "python": "3.12.15"
+  },
+  "host": {
+   "cpu": "Intel(R) Core(TM) i7-6700 CPU @ 3.40GHz",
+   "cpu_threads": 8,
+   "ram_gib": 7.5,
+   "os": "Ubuntu 24.04.5 LTS",
+   "kernel": "7.0.0-43-generic",
+   "arch": "x86_64"
+  }
+ }
+}

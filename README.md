@@ -115,6 +115,10 @@ Other checks (all in `tests/`, 18 passing on the P150a):
 - Ops without an XLA lowering run on the CPU. For example, `torch.unique` and `torch.nonzero` run as
   `aten::_unique2` and `aten::nonzero` fallbacks.
 
+**Tier 1 model ladder:** SmolLM2-135M/360M/1.7B, Qwen2.5-0.5B/1.5B, TinyLlama-1.1B and
+Llama-3.2-1B all run correctly (exact CPU match, or a documented bf16 near-tie) at 3.3-6.0 tok/s
+with 0.5-0.7 GiB of anonymous host RAM. See the [compatibility matrix](docs/COMPATIBILITY.md).
+
 ## How it works
 
 ```mermaid

@@ -163,3 +163,44 @@ Learnings:
   round trips. Native kernel swaps alone will not fix it.
 - Raw logs are not committed because they contain machine-specific driver output. The summary is
   `results/trace_cost_SmolLM2-135M.jsonl`.
+
+
+## Tier 1 model ladder (Nov 21, 2026)
+
+Seven models, one P150a, `scripts/matrix.py` (raw data in `results/matrix/`). All seven are
+correct: five match CPU exactly for 32 tokens, and the two Qwen divergences are bf16 near-ties
+(see docs/COMPATIBILITY.md).
+
+| model | layers | params | warm tok/s TT | CPU tok/s (dtype) |
+|---|---|---|---|---|
+| Llama-3.2-1B | 16 | 1.24B | 5.95 | 5.41 (bf16) |
+| SmolLM2-1.7B | 24 | 1.71B | 4.59 | 3.70 (bf16) |
+| TinyLlama-1.1B | 22 | 1.10B | 4.53 | 6.05 (bf16) |
+| Qwen2.5-0.5B | 24 | 0.49B | 4.06 | 6.51 (fp32) |
+| SmolLM2-135M | 30 | 0.13B | 3.55 | 15.43 (fp32) |
+| Qwen2.5-1.5B | 28 | 1.54B | 3.40 | 2.43 (bf16) |
+| SmolLM2-360M | 32 | 0.36B | 3.34 | 7.85 (fp32) |
+
+Learnings:
+- **Decode speed tracks layer count, not parameter count.** The 135M model is slower than the
+  1.7B one. Per-step time is 9 to 11 ms per decoder layer for all seven models, which fits the host-side
+  trace/dispatch cost measured above (about 280 ms/step for 30 layers). On this host, the card
+  beats the CPU for Llama-3.2-1B, SmolLM2-1.7B and Qwen2.5-1.5B, but not yet for TinyLlama (CPU
+  bf16 is 6.05 tok/s against 4.53) or the sub-0.5B models. A projection, not a measurement: Llama-3.1-8B has 32 layers, so if it stays
+  host-bound it should decode at about 3 to 3.5 tok/s.
+- **Host RAM stays flat at 0.5 to 0.7 GiB anonymous for every model** from 135M to 1.7B. The
+  streaming loader keeps host RAM independent of model size. The old "peak RSS at end" figures
+  (VmHWM) grew with the model, but that's page cache. RssFile spikes to about the checkpoint size
+  during the first readback after the first full forward, then falls back. torch-xla defers
+  the actual host-to-device copy until the first execution, so "load 1.0 s" is the time to queue
+  the uploads, not to copy them.
+- **Teacher-forced parity** (one forward over prompt + the CPU's tokens, then compare argmax at each
+  step) separates real bugs from bf16 near-ties. Both Qwen divergences agree teacher-forced
+  (32/32 and 31/32, the 31/32 at an exact CPU tie).
+- **Device memory query: blocked.** Tried and failed: `xm.get_memory_info` (UNIMPLEMENTED),
+  `TT_RUNTIME_MEMORY_LOG_LEVEL=program|operation` with `TTMLIR_RUNTIME_LOGGER_LEVEL=DEBUG`
+  (no output from the PJRT path), `TT_METAL_MEM_PROFILER=1` (no report), and in-process `ttnn`
+  (it shares the plugin's tt-metal, but `ttnn.GetDefaultDevice()` is None and there's no handle
+  to the plugin's MeshDevice). `tt::runtime::getMemoryView(Device)` exists in libTTMLIRRuntime
+  but isn't reachable from Python or PJRT. A real fix is to implement `PJRT_Device_MemoryStats`
+  in pjrt-plugin-tt (upstream). Until then, quantization memory savings stay **unmeasured**.
