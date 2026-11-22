@@ -274,9 +274,14 @@ re-run `scripts/matrix.py` if you need matrix-aligned tok/s columns.
 ## 9. M4 experiment log
 
 See [M4.md](M4.md). Baseline probe: `scripts/m4_replay_probe.py` (records per-step ms and
-cumulative XLA compile count). Optional: `TENSCUDA_RESIDENT_DECODE_IO=1` reuses on-device
-decode input tensors.
+cumulative XLA compile count). Avoid `TENSCUDA_RESIDENT_DECODE_IO=1` (recompiles every token).
 
 **Baseline (`results/m4_replay_probe_SmolLM2-135M-Instruct.json`, 32 tokens):** XLA compile count
 stays at **4** after the first decode step (no per-token recompile). Steady decode ~**281 ms/step**
 (mean steps 2–31) ≈ **3.6 tok/s** — still host/trace bound; M4 must cut trace ms, not add compiles.
+
+**E2 resident decode IO (Nov 22, failed):** `TENSCUDA_RESIDENT_DECODE_IO=1` makes xla compiles climb
+3→34 and steps ~21 s — in-place mutation of step tensors defeats graph reuse. Keep fresh
+`torch.tensor([[token]])` inputs for now.
+
+**trace_cost (Nov 22, default):** trace **101.6 ms/step**, sync+exec **177.8 ms/step** (steps 9–40).

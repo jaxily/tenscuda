@@ -122,8 +122,7 @@ Details and targets: [docs/VISION.md](docs/VISION.md). Latest measurements: [doc
 
 ## Good first areas
 
-1. **M4 graph replay:** `scripts/m4_replay_probe.py`, `scripts/trace_cost.py`, optional
-   `TENSCUDA_RESIDENT_DECODE_IO=1` — see [docs/M4.md](docs/M4.md).
+1. **M4 graph replay:** `scripts/m4_replay_probe.py`, `scripts/trace_cost.py` — see [docs/M4.md](docs/M4.md).
 3. Reproduce the matrix on other Tenstorrent cards / hosts.
 4. Device-memory introspection for the PJRT plugin (unblocks M5 memory claims).
 5. Sampling on the fixed-shape generate path.
