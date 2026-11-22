@@ -115,9 +115,9 @@ Other checks (all in `tests/`, 18 passing on the P150a):
 - Ops without an XLA lowering run on the CPU. For example, `torch.unique` and `torch.nonzero` run as
   `aten::_unique2` and `aten::nonzero` fallbacks.
 
-**Tier 1 model ladder:** SmolLM2-135M/360M/1.7B, Qwen2.5-0.5B/1.5B, TinyLlama-1.1B and
-Llama-3.2-1B all run correctly (exact CPU match, or a documented bf16 near-tie) at 3.3-6.0 tok/s
-with 0.5-0.7 GiB of anonymous host RAM. See the [compatibility matrix](docs/COMPATIBILITY.md).
+**Compatibility matrix (Nov 2026):** 12 models from 135M through **Llama-3.1-8B** (M2 phi3/gemma2
+complete; 8B loads on a 8 GB host with **0.55 GiB** peak anon RSS, ~3.0 tok/s warm decode).
+See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## How it works
 
@@ -148,6 +148,8 @@ flowchart TD
 ## Compatibility matrix
 
 Per-model status, parity, speed, compile time and memory are in **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)**.
+The `torch.cuda.*` shim surface (Y / STUB / N) is in **[docs/API_COMPATIBILITY.md](docs/API_COMPATIBILITY.md)**.
+Set `TENSCUDA_MIGRATION_LOG=1` for an exit summary of mapped vs stub API touches.
 Add a model with one command: `python scripts/matrix.py <hf-model-id>`.
 
 ## Benchmark your card
@@ -176,7 +178,7 @@ generated from those files by `python scripts/build_leaderboard.py`.
 - **Slower than the CPU on tiny models.** Decoding is host-bound: torch-xla re-traces the
   Python model every token (about 0.25 s per step on a 2015-era 4-core CPU), while the card
   itself is busy for only about 6% of the step. Small models are therefore slower than running
-  them on the CPU. Larger models should do relatively better, but that isn't measured yet.
+  them on the CPU. Llama-3.1-8B still decodes at about **3.0 tok/s** warm on this host (see matrix).
 - **Quantization is experimental.** `tenscuda.quant.quantize_weights(model, "bfp_bf8")` uses
   TT-XLA's weight-dtype pass. On TinyLlama, bfp8 keeps 32/32 token parity and bfp4 is clearly
   lossy (87.9% argmax agreement). Device-memory savings are **not** verified, and speed doesn't
@@ -200,8 +202,8 @@ python scripts/op_parity.py      # per-op error table -> results/op_parity.json
 ## Roadmap
 
 1. Graph replay for decode (no per-token Python re-trace), the main speed lever.
-2. Larger single-card models: Llama-3.2-3B, then 7-8B with the streaming loader.
-3. Verified bfp8/bfp4 weights with accuracy and memory numbers.
+2. Token parity on 8B+ without a host CPU reference; verified bfp8/bfp4 **device** memory savings.
+3. Native-kernel swaps (matmul, SDPA, RMSNorm, rotary) where TT-XLA is slow.
 4. Sampling (top-k/top-p) on the fast path.
 5. Two-card (2x P150) model splitting.
 6. Encoder (BERT-style) and vision model coverage.

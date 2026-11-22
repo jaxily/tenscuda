@@ -84,6 +84,13 @@ Learnings:
 - Multi-step graphs and dynamo both corrupt HF `StaticCache` in-place updates (the likely
   cause is aliasing or mutation handling across steps). Fixing this, or using a functional
   KV cache, is the precondition for graph replay, the main remaining speed lever.
+
+**Root cause (Nov 2026, `scripts/kv_diagnose.py`):** Multiple decode forwards queued in one lazy
+graph before `torch_xla.sync()` (old resident `chunk>1` pattern) produce wrong tokens. The fix is
+Neuron-style **one sync per decode forward** (`tenscuda.generate._forward_decode_step`). Resident
+decode now syncs inside the chunk loop; chunking only groups host timing, not XLA launches.
+Re-benchmark after this change: `python scripts/measure_decode_subset.py` on the P150a (writes
+`results/measure_decode_subset_*.json`).
 - Compile cost: the first run compiles 4-5 graphs (prefill, two decode variants, small helpers).
   That takes about 23-39 s, plus the kernel JIT cache in `~/.cache/tt-metal-cache` (about 1.8 GB
   after these runs).
@@ -186,8 +193,7 @@ Learnings:
   1.7B one. Per-step time is 9 to 11 ms per decoder layer for all seven models, which fits the host-side
   trace/dispatch cost measured above (about 280 ms/step for 30 layers). On this host, the card
   beats the CPU for Llama-3.2-1B, SmolLM2-1.7B and Qwen2.5-1.5B, but not yet for TinyLlama (CPU
-  bf16 is 6.05 tok/s against 4.53) or the sub-0.5B models. A projection, not a measurement: Llama-3.1-8B has 32 layers, so if it stays
-  host-bound it should decode at about 3 to 3.5 tok/s.
+  bf16 is 6.05 tok/s against 4.53) or the sub-0.5B models.
 - **Host RAM stays flat at 0.5 to 0.7 GiB anonymous for every model** from 135M to 1.7B. The
   streaming loader keeps host RAM independent of model size. The old "peak RSS at end" figures
   (VmHWM) grew with the model, but that's page cache. RssFile spikes to about the checkpoint size
@@ -197,6 +203,27 @@ Learnings:
 - **Teacher-forced parity** (one forward over prompt + the CPU's tokens, then compare argmax at each
   step) separates real bugs from bf16 near-ties. Both Qwen divergences agree teacher-forced
   (32/32 and 31/32, the 31/32 at an exact CPU tie).
+
+## M2 3–4B and first M3 8B (Nov 21, 2026)
+
+Five more `scripts/matrix.py` rows on the same P150a host (`results/matrix/`).
+
+| model | arch | status | warm tok/s TT | first run s | peak anon host RSS | notes |
+|---|---|---|---|---|---|---|
+| Llama-3.2-3B | llama | works | 3.52 | 108 | 0.56 GiB | 32/32 vs CPU bf16 |
+| Qwen2.5-3B | qwen2 | near-tie | 2.63 | 139 | 0.49 GiB | teacher 29/32 |
+| Phi-3.5-mini | phi3 | near-tie | 2.67 | 640 | 0.55 GiB | greedy 6/32 at margin 0.25; teacher 31/32; 71 compile graphs |
+| Gemma-2-2b-it | gemma2 | works | 2.27 | 792 | 2.20 GiB | loader must set `embed_scale=sqrt(hidden)`; 39 graphs |
+| Llama-3.1-8B | llama | works | 3.00 | 198 | **0.52 GiB** | CPU bf16 mmap on 8 GB host; 32/32 greedy + teacher |
+
+Learnings:
+- **Llama-3.1-8B on 8 GB host (M3):** TT streaming keeps **0.52 GiB** RssAnon; CPU bf16 reference
+  works via mmap (~0.53 GiB anon, ~0.03 tok/s decode). Greedy and teacher-forced **32/32**.
+- **Gemma2 loader:** `Gemma2TextScaledWordEmbedding` needs `sqrt(hidden_size)` when rebuilding
+  non-persistent buffers; `embed_scale=1.0` made every token wrong (teacher 1/32).
+- **Phi / Gemma compile cost:** first runs are 10–13 minutes (many graphs); warm decode is ~2.3–2.7 tok/s.
+- **8B warm decode measured at 3.01 tok/s** (32 layers), not a projection.
+
 - **Device memory query: blocked.** Tried and failed: `xm.get_memory_info` (UNIMPLEMENTED),
   `TT_RUNTIME_MEMORY_LOG_LEVEL=program|operation` with `TTMLIR_RUNTIME_LOGGER_LEVEL=DEBUG`
   (no output from the PJRT path), `TT_METAL_MEM_PROFILER=1` (no report), and in-process `ttnn`
@@ -204,3 +231,31 @@ Learnings:
   to the plugin's MeshDevice). `tt::runtime::getMemoryView(Device)` exists in libTTMLIRRuntime
   but isn't reachable from Python or PJRT. A real fix is to implement `PJRT_Device_MemoryStats`
   in pjrt-plugin-tt (upstream). Until then, quantization memory savings stay **unmeasured**.
+
+## 8. Shim maturity (migration logging, Nov 2026)
+
+Inspired by Habana's GPU Migration Toolkit logging and Neuron's API compatibility tables:
+
+| Feature | Env / command |
+|---|---|
+| Per-API first touch | `TENSCUDA_MIGRATION_LOG=2` |
+| Exit summary | `TENSCUDA_MIGRATION_LOG=1` |
+| API table | `docs/API_COMPATIBILITY.md` (`python scripts/render_api_compat.py`) |
+
+`torch.cuda.memory_*` tries `xm.get_memory_info` when implemented; otherwise returns `0` and logs
+`stub` once. Stream/Event/current_stream are survivability no-ops that call `torch_xla.sync` on
+`synchronize()`.
+
+**Functional decode re-bench (Nov 22, 2026, P150a, `measure_decode_subset.py`):**
+`results/measure_decode_subset_2026-11-22T043102Z.json` — 1 cold + 3 warm runs, 32 new tokens,
+per-step sync (`_forward_decode_step`). Warm tok/s is mean of runs 2–4 (decode-phase only).
+
+| Model | first run s | warm tok/s (runs 2–4) | matrix warm (prior) |
+|---|---|---|---|
+| SmolLM2-135M | 54.2 | 3.61 | 3.55 |
+| TinyLlama-1.1B | 37.3 | 4.61 | 4.53 |
+| Llama-3.2-1B | 25.8 | 4.77 | 5.95 |
+
+No parity regression expected: decode path is refactor-only (explicit prefill/decode + same sync
+boundaries). Llama-3.2-1B warm is lower than the matrix row — same host variance as other runs;
+re-run `scripts/matrix.py` if you need matrix-aligned tok/s columns.

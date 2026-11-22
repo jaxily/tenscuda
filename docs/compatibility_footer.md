@@ -9,7 +9,12 @@ Notes:
 - **Host RAM:** "anon" is peak RssAnon (sampled every 10 ms), the memory that has to fit in host RAM.
   VmHWM also counts the mmapped safetensors pages. torch-xla defers the host-to-device copy until
   the first execution, so the checkpoint is paged in then as reclaimable page cache.
-- **Llama-3.2-1B** uses the ungated `unsloth/Llama-3.2-1B-Instruct` mirror (same weights);
-  `meta-llama/Llama-3.2-1B-Instruct` is gated for this host's token.
+- **Llama-3.2-1B / 3.2-3B / 3.1-8B** use ungated `unsloth/*` mirrors (same weights) where the
+  Meta checkpoints are gated on this host.
+- **Gemma-2-2B** uses `unsloth/gemma-2-2b-it` (`google/gemma-2-2b-it` is gated here). The loader
+  rebuilds `Gemma2TextScaledWordEmbedding` buffers with `embed_scale = sqrt(hidden_size)`.
+- **Phi-3.5-mini** greedy stream diverges at step 6 (CPU top-2 margin 0.25); teacher-forced is 31/32.
+- **Llama-3.1-8B** CPU reference uses mmap'd bf16 on the 8 GB host (~0.53 GiB peak anon, slow).
+  TT streaming load peak **anon** was 0.52 GiB; greedy and teacher-forced **32/32** vs CPU bf16.
 - Device memory isn't shown. `xm.get_memory_info` is UNIMPLEMENTED in pjrt-plugin-tt
   1.5.0.dev20260831, and no other in-process route works yet (see docs/PERF.md).

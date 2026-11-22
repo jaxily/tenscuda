@@ -4,11 +4,13 @@ HF's stock ``generate`` grows ``input_ids`` by one token per step and checks
 stopping criteria on the device. Under torch-xla every new shape is a new
 graph, so the stock loop triggers a fresh TT-MLIR compile for every token.
 
-This loop keeps all shapes constant after the first step:
-  * a ``StaticCache`` sized to ``prompt + max_new_tokens`` (rounded up),
-  * one prefill graph (prompt length), and one 1-token decode graph reused
-    for every later token,
-  * token bookkeeping and stopping checks on the host CPU.
+Neuron-style pattern (transformers-neuronx / NxD inference):
+  * separate prefill vs single-token decode launches,
+  * one XLA graph boundary per token (``_sync()`` after each forward),
+  * ``StaticCache`` updated between launches, not batched inside one lazy graph.
+
+Batching K>1 decode steps without a sync between steps corrupts ``StaticCache``
+(see ``scripts/kv_diagnose.py`` and docs/PERF.md).
 """
 from __future__ import annotations
 
@@ -41,6 +43,33 @@ def _compiled_forward(model):
     return fn
 
 
+def _forward_prefill(fwd, model, input_ids, cache, dev):
+    plen = input_ids.shape[1]
+    pos = torch.arange(plen, device=dev)
+    out = fwd(
+        input_ids=input_ids.to(dev),
+        cache_position=pos,
+        past_key_values=cache,
+        use_cache=True,
+    )
+    _sync()
+    return out.logits
+
+
+def _forward_decode_step(fwd, token_id: int, cache_position: int, cache, dev):
+    """One decode token; must end with ``_sync()`` before the next step."""
+    step_ids = torch.tensor([[token_id]], device=dev)
+    step_pos = torch.tensor([cache_position], device=dev)
+    out = fwd(
+        input_ids=step_ids,
+        cache_position=step_pos,
+        past_key_values=cache,
+        use_cache=True,
+    )
+    _sync()
+    return out.logits
+
+
 def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=None,
                            attention_mask=None, pad_to=64, stats=None, compile=None):
     from transformers import StaticCache
@@ -66,25 +95,17 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
     timings = []
     with torch.no_grad():
         t = time.time()
-        pos = torch.arange(plen).to(dev)
-        logits = fwd(input_ids=ids_cpu.to(dev), cache_position=pos, past_key_values=cache,
-                       use_cache=True).logits
-        _sync()
-        nxt = logits[:, -1, :].argmax(-1)
-        tok = int(nxt.cpu())
+        logits = _forward_prefill(fwd, model, ids_cpu, cache, dev)
+        nxt = int(logits[:, -1, :].argmax(-1).cpu())
         timings.append(time.time() - t)
-        out.append(tok)
+        out.append(nxt)
         cur = plen
-        while len(out) < max_new_tokens and tok not in eos:
+        while len(out) < max_new_tokens and nxt not in eos:
             t = time.time()
-            step_ids = torch.tensor([[tok]]).to(dev)
-            step_pos = torch.tensor([cur]).to(dev)
-            logits = fwd(input_ids=step_ids, cache_position=step_pos, past_key_values=cache,
-                           use_cache=True).logits
-            _sync()
-            tok = int(logits[:, -1, :].argmax(-1).cpu())
+            logits = _forward_decode_step(fwd, nxt, cur, cache, dev)
+            nxt = int(logits[:, -1, :].argmax(-1).cpu())
             timings.append(time.time() - t)
-            out.append(tok)
+            out.append(nxt)
             cur += 1
     if stats is not None:
         stats["step_seconds"] = timings

@@ -26,8 +26,11 @@ batch 1, the chat prompt "Explain in two sentences why the sky is blue." and 32 
 | unsloth/Llama-3.2-1B-Instruct | 1.24B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 5.95 (5.91-6.00) | 22 | 0.69 GiB anon (VmHWM 3.28) | 5.41 (bfloat16) | compile 21.7 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
 | Qwen/Qwen2.5-1.5B-Instruct | 1.54B | qwen2 | works (near-tie) | 28/32 vs CPU bfloat16; CPU top-2 margin 0.0 at step 28; teacher-forced top-1 31/32 (CPU margins 0.0) | 3.40 (3.39-3.43) | 57 | 0.59 GiB anon (VmHWM 3.76) | 2.43 (bfloat16) | compile 70.3 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
 | HuggingFaceTB/SmolLM2-1.7B-Instruct | 1.71B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 4.59 (4.57-4.62) | 41 | 0.58 GiB anon (VmHWM 3.75) | 3.7 (bfloat16) | compile 41.4 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| unsloth/gemma-2-2b-it | 2.61B | gemma2 | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 2.27 (2.27-2.28) | 792 | 2.2 GiB anon (VmHWM 4.48) | 0.32 (bfloat16) | compile 782.1 s / 39 graphs; CPU fallbacks: aten::_local_scalar_dense |
 | Qwen/Qwen2.5-3B-Instruct | 3.09B | qwen2 | works (near-tie) | 6/32 vs CPU bfloat16; CPU top-2 margin 0.0 at step 6; teacher-forced top-1 29/32 (CPU margins 0.0, 0.125, 0.125) | 2.63 (2.62-2.65) | 139 | 0.49 GiB anon (VmHWM 2.79) | 0.12 (bfloat16) | compile 112.9 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
 | unsloth/Llama-3.2-3B-Instruct | 3.21B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 3.52 (3.51-3.53) | 108 | 0.56 GiB anon (VmHWM 3.97) | 0.1 (bfloat16) | compile 57.5 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| microsoft/Phi-3.5-mini-instruct | 3.82B | phi3 | works (near-tie) | 6/32 vs CPU bfloat16; CPU top-2 margin 0.25 at step 6; teacher-forced top-1 31/32 (CPU margins 0.25) | 2.67 (2.66-2.68) | 640 | 0.55 GiB anon (VmHWM 3.26) | 0.11 (bfloat16) | compile 616.0 s / 71 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| unsloth/Meta-Llama-3.1-8B-Instruct | 8.03B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 3.00 (2.99-3.02) | 198 | 0.52 GiB anon (VmHWM 4.04) | 0.03 (bfloat16) | compile 74.0 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
 
 Notes:
 
@@ -40,7 +43,12 @@ Notes:
 - **Host RAM:** "anon" is peak RssAnon (sampled every 10 ms), the memory that has to fit in host RAM.
   VmHWM also counts the mmapped safetensors pages. torch-xla defers the host-to-device copy until
   the first execution, so the checkpoint is paged in then as reclaimable page cache.
-- **Llama-3.2-1B** uses the ungated `unsloth/Llama-3.2-1B-Instruct` mirror (same weights);
-  `meta-llama/Llama-3.2-1B-Instruct` is gated for this host's token.
+- **Llama-3.2-1B / 3.2-3B / 3.1-8B** use ungated `unsloth/*` mirrors (same weights) where the
+  Meta checkpoints are gated on this host.
+- **Gemma-2-2B** uses `unsloth/gemma-2-2b-it` (`google/gemma-2-2b-it` is gated here). The loader
+  rebuilds `Gemma2TextScaledWordEmbedding` buffers with `embed_scale = sqrt(hidden_size)`.
+- **Phi-3.5-mini** greedy stream diverges at step 6 (CPU top-2 margin 0.25); teacher-forced is 31/32.
+- **Llama-3.1-8B** CPU reference uses mmap'd bf16 on the 8 GB host (~0.53 GiB peak anon, slow).
+  TT streaming load peak **anon** was 0.52 GiB; greedy and teacher-forced **32/32** vs CPU bf16.
 - Device memory isn't shown. `xm.get_memory_info` is UNIMPLEMENTED in pjrt-plugin-tt
   1.5.0.dev20260831, and no other in-process route works yet (see docs/PERF.md).

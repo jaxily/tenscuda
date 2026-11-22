@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import glob
 import json
+import math
 import os
 import time
 
@@ -27,6 +28,38 @@ def _resolve(model_id: str) -> str:
     return snapshot_download(model_id, allow_patterns=["*.json", "*.safetensors", "*.model", "*.txt"])
 
 
+def _float_scalar(val, default=1.0):
+    if val is None:
+        return default
+    if isinstance(val, torch.Tensor):
+        return float(val.detach().cpu().reshape(-1)[0].item()) if val.numel() else default
+    return float(val)
+
+
+def _fresh_module(mod, config):
+    """Instantiate a module like ``mod`` so HF can recompute non-persistent buffers."""
+    cls = type(mod)
+    cfg = getattr(mod, "config", config)
+    for factory in (
+        lambda: cls(config=cfg),
+        lambda: cls(cfg),
+        lambda: cls(config),
+    ):
+        try:
+            return factory()
+        except TypeError:
+            continue
+    if hasattr(mod, "num_embeddings") and hasattr(mod, "embedding_dim"):
+        tc = getattr(cfg, "text_config", cfg) if cfg is not None else config
+        hidden = getattr(tc, "hidden_size", mod.embedding_dim)
+        scale = _float_scalar(getattr(tc, "embed_scale", math.sqrt(float(hidden))))
+        pad = getattr(mod, "padding_idx", None)
+        if pad is not None and isinstance(pad, torch.Tensor):
+            pad = int(pad.reshape(-1)[0].item())
+        return cls(mod.num_embeddings, mod.embedding_dim, pad, embed_scale=scale)
+    raise TypeError(f"{cls.__name__} has no known constructor pattern")
+
+
 def _rebuild_nonpersistent_buffers(model, config, device):
     """Buffers like rotary ``inv_freq`` are not in the checkpoint; recompute them on CPU."""
     fixed = []
@@ -35,7 +68,7 @@ def _rebuild_nonpersistent_buffers(model, config, device):
         if not np_bufs:
             continue
         try:
-            fresh = type(mod)(config=getattr(mod, "config", config))
+            fresh = _fresh_module(mod, config)
         except Exception as e:  # pragma: no cover - model specific
             raise NotImplementedError(f"tenscuda loader: cannot rebuild buffers of {name} "
                                       f"({type(mod).__name__}): {e}") from e

@@ -1,8 +1,8 @@
-"""Device-resident greedy decode with K steps per graph / host launch.
+"""Device-resident greedy decode; optional multi-step chunking.
 
-No per-token CPU tensor reads. Tokens and positions stay on the TT device;
-only the completed output is read back to the host. An EOS token truncates the
-returned output, but computation runs to the requested max length.
+Each decode forward must end with ``torch_xla.sync()`` before the next forward
+when using ``StaticCache`` (see ``scripts/kv_diagnose.py``). Chunking only
+amortizes host-side overhead between syncs; inner loop syncs per token.
 """
 import os
 import time
@@ -10,6 +10,8 @@ import time
 import torch
 import torch_xla
 from transformers import StaticCache
+
+from .generate import _forward_decode_step, _forward_prefill
 
 
 def generate(model, input_ids, max_new_tokens=32, eos_token_id=None, stats=None, chunk=1, pad_to=64):
@@ -24,23 +26,21 @@ def generate(model, input_ids, max_new_tokens=32, eos_token_id=None, stats=None,
     timings = []
     with torch.no_grad():
         t = time.time()
-        pos = torch.arange(plen).to(dev)
-        logits = model(input_ids=ids_cpu.to(dev), cache_position=pos, past_key_values=cache, use_cache=True).logits
+        logits = _forward_prefill(model, model, ids_cpu, cache, dev)
         nxt = logits[:, -1, :].argmax(-1).reshape(1, 1)
-        torch_xla.sync(wait=True)
         timings.append(time.time() - t)
         tokens.append(nxt)
-        step_pos = torch.tensor([plen]).to(dev)
+        step_pos = plen
         n = 1
         while n < max_new_tokens:
             t = time.time()
             K = min(chunk, max_new_tokens - n)
             for _ in range(K):
-                logits = model(input_ids=nxt, cache_position=step_pos, past_key_values=cache, use_cache=True).logits
+                tok = int(nxt.reshape(-1).cpu())
+                logits = _forward_decode_step(model, tok, step_pos, cache, dev)
                 nxt = logits[:, -1, :].argmax(-1).reshape(1, 1)
                 tokens.append(nxt)
-                step_pos = step_pos + 1
-            torch_xla.sync(wait=True)
+                step_pos += 1
             timings.extend([(time.time() - t) / K] * K)
             n += K
     out = torch.cat(tokens, 1).cpu()

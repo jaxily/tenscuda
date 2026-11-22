@@ -11,6 +11,8 @@ from types import SimpleNamespace
 import torch
 
 from . import accurate_ops as _accurate
+from . import cuda_stubs
+from . import migration_log as mig
 
 log = logging.getLogger("tenscuda")
 
@@ -234,40 +236,97 @@ def _patch_torch_cuda():
              "set_device", "empty_cache", "is_bf16_supported", "manual_seed",
              "manual_seed_all", "memory_allocated", "max_memory_allocated",
              "memory_reserved", "reset_peak_memory_stats", "is_initialized", "init",
-             "get_rng_state", "set_rng_state", "get_rng_state_all", "set_rng_state_all")
+             "get_rng_state", "set_rng_state", "get_rng_state_all", "set_rng_state_all",
+             "current_stream", "default_stream", "stream", "Stream", "Event")
     for n in names:
         if hasattr(c, n):
             _S.originals[f"cuda.{n}"] = getattr(c, n)
 
     n = _S.n_devices
-    c.is_available = lambda: True
-    c.device_count = lambda: n
-    c.current_device = lambda: 0
-    c.set_device = lambda d: None
-    c.get_device_name = lambda d=None: "Tenstorrent Blackhole (TensCUDA/TT-XLA)"
-    c.get_device_capability = lambda d=None: (8, 0)  # claims bf16-capable class
-    c.get_device_properties = lambda d=None: SimpleNamespace(
-        name="Tenstorrent Blackhole (TensCUDA/TT-XLA)", total_memory=32 * 1024**3,
-        major=8, minor=0, multi_processor_count=120)
-    c.synchronize = lambda d=None: sync()
-    c.empty_cache = lambda: None
-    c.is_bf16_supported = lambda *a, **k: True
-    # torch.manual_seed() itself calls torch.cuda.manual_seed_all(), so these must
-    # not call back into torch.manual_seed (infinite recursion). Seed the XLA RNG.
-    c.manual_seed = _seed_xla
-    c.manual_seed_all = _seed_xla
-    c.memory_allocated = lambda d=None: 0
-    c.max_memory_allocated = lambda d=None: 0
-    c.memory_reserved = lambda d=None: 0
-    c.reset_peak_memory_stats = lambda d=None: None
-    # torch._dynamo snapshots/restores the CUDA RNG whenever cuda "is available";
-    # the real functions would touch a non-existent CUDA runtime.
-    c.get_rng_state = lambda device="cuda": torch.zeros(16, dtype=torch.uint8)
-    c.set_rng_state = lambda state, device="cuda": None
-    c.get_rng_state_all = lambda: [torch.zeros(16, dtype=torch.uint8)] * n
-    c.set_rng_state_all = lambda states: None
-    c.is_initialized = lambda: True
-    c.init = lambda: None
+    W = mig.wrap
+
+    def is_available():
+        return True
+
+    def device_count():
+        return n
+
+    def current_device():
+        return 0
+
+    def set_device(d):
+        return None
+
+    def get_device_name(d=None):
+        return "Tenstorrent Blackhole (TensCUDA/TT-XLA)"
+
+    def get_device_capability(d=None):
+        return (8, 0)
+
+    def get_device_properties(d=None):
+        return SimpleNamespace(
+            name="Tenstorrent Blackhole (TensCUDA/TT-XLA)", total_memory=32 * 1024**3,
+            major=8, minor=0, multi_processor_count=120)
+
+    def empty_cache():
+        return None
+
+    def is_bf16_supported(*a, **k):
+        return True
+
+    def reset_peak_memory_stats(d=None):
+        return None
+
+    def get_rng_state(device="cuda"):
+        return torch.zeros(16, dtype=torch.uint8)
+
+    def set_rng_state(state, device="cuda"):
+        return None
+
+    def get_rng_state_all():
+        return [torch.zeros(16, dtype=torch.uint8)] * n
+
+    def set_rng_state_all(states):
+        return None
+
+    def is_initialized():
+        return True
+
+    def init():
+        return None
+
+    c.is_available = W("torch.cuda.is_available", "mapped", is_available)
+    c.device_count = W("torch.cuda.device_count", "mapped", device_count)
+    c.current_device = W("torch.cuda.current_device", "stub", current_device)
+    c.set_device = W("torch.cuda.set_device", "stub", set_device)
+    c.get_device_name = W("torch.cuda.get_device_name", "stub", get_device_name)
+    c.get_device_capability = W("torch.cuda.get_device_capability", "stub", get_device_capability)
+    c.get_device_properties = W("torch.cuda.get_device_properties", "stub", get_device_properties)
+    c.synchronize = W("torch.cuda.synchronize", "mapped", lambda d=None: sync())
+    c.empty_cache = W("torch.cuda.empty_cache", "stub", empty_cache)
+    c.is_bf16_supported = W("torch.cuda.is_bf16_supported", "mapped", is_bf16_supported)
+    c.manual_seed = W("torch.cuda.manual_seed", "mapped", _seed_xla)
+    c.manual_seed_all = W("torch.cuda.manual_seed_all", "mapped", _seed_xla)
+    c.memory_allocated = W(
+        "torch.cuda.memory_allocated", "stub",
+        lambda d=None: cuda_stubs.memory_bytes_stub("allocated", d),
+    )
+    c.max_memory_allocated = W(
+        "torch.cuda.max_memory_allocated", "stub",
+        lambda d=None: cuda_stubs.memory_bytes_stub("max_allocated", d),
+    )
+    c.memory_reserved = W(
+        "torch.cuda.memory_reserved", "stub",
+        lambda d=None: cuda_stubs.memory_bytes_stub("reserved", d),
+    )
+    c.reset_peak_memory_stats = W("torch.cuda.reset_peak_memory_stats", "stub", reset_peak_memory_stats)
+    c.get_rng_state = W("torch.cuda.get_rng_state", "stub", get_rng_state)
+    c.set_rng_state = W("torch.cuda.set_rng_state", "stub", set_rng_state)
+    c.get_rng_state_all = W("torch.cuda.get_rng_state_all", "stub", get_rng_state_all)
+    c.set_rng_state_all = W("torch.cuda.set_rng_state_all", "stub", set_rng_state_all)
+    c.is_initialized = W("torch.cuda.is_initialized", "mapped", is_initialized)
+    c.init = W("torch.cuda.init", "stub", init)
+    cuda_stubs.patch_stream_api(c)
 
 
 # --------------------------------------------------- HF generate: static cache
@@ -369,6 +428,7 @@ def install(fp16_to_bf16: bool = True, static_cache: bool = True) -> _State:
         _patch_hf_generate()
     _S.device = _xla_device(0)
     _S.active = True
+    mig.register_summary_on_exit()
     if os.environ.get("TENSCUDA_QUIET", "0") != "1":
         log.warning("tenscuda: 'cuda' -> %s (%d TT device(s))", _S.device, n)
     return _S

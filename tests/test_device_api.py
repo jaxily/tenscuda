@@ -51,3 +51,22 @@ def test_matmul_close_to_cpu():
 
 def test_synchronize():
     torch.cuda.synchronize()
+
+
+def test_stream_stubs():
+    s = torch.cuda.current_stream()
+    s.synchronize()
+    e = torch.cuda.Event()
+    e.record()
+    e.synchronize()
+
+
+def test_migration_log_on_stub_touch():
+    import os
+
+    from tenscuda import migration_log as mig
+
+    mig.reset_for_tests()
+    os.environ["TENSCUDA_MIGRATION_LOG"] = "2"
+    torch.cuda.memory_allocated()
+    assert any(k.endswith("memory_allocated") for k in mig._counts)
