@@ -85,7 +85,8 @@ model = load_causal_lm("TinyLlama/TinyLlama-1.1B-Chat-v1.0")   # meta skeleton +
 | | |
 |---|---|
 | Card | Tenstorrent Blackhole P150a (one card) |
-| Host | Ubuntu 24.04, 4-core Intel i7-6700, 8 GB RAM, PCIe 3.0 x16 |
+| Host (current) | Ubuntu 24.04, **Intel Core i7-9700**, **32 GB RAM**, 1200 W PSU, PCIe to P150 (re-benchmark in progress — [HARDWARE_BASELINE.md](docs/HARDWARE_BASELINE.md)) |
+| Host (legacy) | i7-6700, 8 GB — most tok/s numbers in PERF/COMPATIBILITY through Nov 2025 |
 | System stack | tt-metal v0.82, KMD 2.11.0, firmware bundle 18.10.0 |
 | Python stack | Python 3.12, torch 2.11.0+cpu, torch-xla 2.9.0 (TT build), pjrt-plugin-tt 1.5.0.dev20260831, transformers 5.17.0 |
 

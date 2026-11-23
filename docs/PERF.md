@@ -1,6 +1,6 @@
 # TensCUDA performance & learnings log
 
-Hardware: one Tenstorrent Blackhole P150a on PCIe 3.0 x16. Host: 4-core Intel i7-6700, 8 GB RAM.
+Hardware: one Tenstorrent Blackhole P150a on PCIe 3.0 x16. **Legacy measurements:** 4-core Intel i7-6700, 8 GB RAM (H110). **Primary host (Nov 2025 upgrade):** Core i7-9700, 32 GB RAM, 1200 W PSU — see [HARDWARE_BASELINE.md](HARDWARE_BASELINE.md) (M4 re-benchmark pending).
 Stack: tt-metal v0.82, KMD 2.11.0, pjrt-plugin-tt 1.5.0.dev20260831, torch-xla 2.9.0, torch 2.11.0, transformers 5.17.0.
 The prompt is a chat template plus "Explain in two sentences why the sky is blue." Decoding is greedy, 32 new tokens, batch 1.
 "Warm" means the runs after the first one in the same process. Each experiment was repeated at least 3x. Raw JSON is in `results/`.
@@ -317,3 +317,7 @@ Validated on decode subset (``results/m4_pause_compare_2026-11-22T181456Z.json``
 **B3b ``XLA_DYNAMO_DISABLE=1`` (Nov 22, measure-only):** trace 102.2 / sync 177.3 ms, tokens match; no default change.
 
 **M4+ stable roadmap (Nov 22):** [COMPILE_AND_SHAPES.md](COMPILE_AND_SHAPES.md), [HARDWARE_BASELINE.md](HARDWARE_BASELINE.md), [TT_UPSTREAM.md](TT_UPSTREAM.md). Optional decode flags: ``TENSCUDA_THIN_DECODE=1``, ``TENSCUDA_LOADER_PREFETCH=1`` (measure before claiming wins).
+
+**Host upgrade (Nov 2025):** User moved test box to **i7-9700 / 32 GB / 1200 W PSU**; legacy i7-6700 / 8 GB numbers above remain valid until the [HARDWARE_BASELINE.md](HARDWARE_BASELINE.md) day-one suite is re-run on the new board.
+
+**Optional flags on legacy rock (Nov 22):** ``TENSCUDA_THIN_DECODE=1`` — parity gate 8/8, 32/32 tokens; ``TENSCUDA_LOADER_PREFETCH=1`` — TinyLlama load **1.46 s → 1.21 s**; matrix ``--pause-benchmark`` on SmolLM2 **14.3%** pause Δ (243.7 ms).
