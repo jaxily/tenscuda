@@ -35,8 +35,9 @@ if ! lsmod | grep -q tenstorrent; then
   sudo modprobe tenstorrent
 fi
 
-if [[ ! -e /dev/tenstorrent0 ]]; then
-  echo "WARN: /dev/tenstorrent0 missing — check: dmesg | tail -30; lspci -vv -s 01:00.0"
+if [[ ! -e /dev/tenstorrent/0 && ! -e /dev/tenstorrent0 ]]; then
+  echo "WARN: no Tenstorrent char dev — expected /dev/tenstorrent/0 (KMD 2.11+) or /dev/tenstorrent0"
+  echo "       check: lsmod tenstorrent; dmesg | tail -30; lspci -vv -s 01:00.0"
   exit 1
 fi
 

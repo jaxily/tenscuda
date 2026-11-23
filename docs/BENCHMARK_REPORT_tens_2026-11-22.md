@@ -15,7 +15,16 @@ Primary card host after Ryzen 9700X upgrade. Compare to legacy **`rock`** (i7-67
 | Card | Blackhole P150a, FW bundle 18.10.0 |
 | TensCUDA | `a4a9d26` (+ local harness scripts, rsync install) |
 
-Bring-up: DKMS install, `modprobe tenstorrent`, venv-local **SFPI 7.69.0** (see README).
+Bring-up: DKMS install, **Secure Boot off**, `modprobe tenstorrent`, venv-local **SFPI 7.69.0** (see README).
+Smoke: **`/dev/tenstorrent/0`** (KMD 2.11+), `tenscuda.is_active` → `True`. UMD warnings (power-state, B850 tray_id) are benign on this board.
+
+### Re-verified 2026-11-23 (manual on `tens`)
+
+| Check | Result |
+|-------|--------|
+| `trace_cost.py` default | trace **21.9 ms**, sync **32.2 ms** |
+| `m4_replay_probe` 32 steps | default **53.1 ms/step**, pause **43.7 ms/step** → **17.7%** Δ |
+| Artifacts | `results/m4_replay_probe_SmolLM2-135M-Instruct.json` (+ `_pause.json`) |
 
 ## M4 headline (SmolLM2-135M)
 
@@ -23,7 +32,7 @@ Bring-up: DKMS install, `modprobe tenstorrent`, venv-local **SFPI 7.69.0** (see 
 |--------|---------------|------------|--------|
 | trace_ms | ~102 | **22.7** | `trace_cost.py` |
 | sync_ms | ~178 | **32.9** | |
-| replay mean decode ms | ~282 | **~55** | pause **~45** (**18.9%** Δ) |
+| replay mean decode ms | ~282 | **53.1** | pause **43.7** (**17.7%** Δ, 2026-11-23) |
 | HF matrix warm tok/s | ~3.55 | **~18** | first compile **~8–10 s** vs ~50 s |
 | CPU ref tok/s (fp32) | ~15 | **~38** | same harness |
 

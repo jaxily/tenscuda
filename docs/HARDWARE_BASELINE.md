@@ -18,20 +18,20 @@ SSH alias **`tens`** (192.168.1.210). Card host rebuilt **Nov 2025** with Ryzen 
 | Secure Boot | **disabled** (required for unsigned `tenstorrent` DKMS) |
 | Card | Tenstorrent Blackhole P150a ×1, firmware bundle **18.10.0** |
 | OS | Ubuntu 24.04, kernel **7.0.0-43-generic** |
-| KMD | **2.11.0** (`tenstorrent-dkms`) |
+| KMD | **2.11.0** (`tenstorrent-dkms`); device **`/dev/tenstorrent/0`** (not `tenstorrent0`) |
 | Stack | See [README](../README.md) quickstart pins |
 | TensCUDA commit | `a4a9d26` (rsync from dev; host has no `git` yet) |
 | M4 numbers | **2026-11-22** suite on `tens` (see below) |
 
 UMD notes (non-fatal): `Setting power state failed: Remote I/O error`; eth FW 1.6.0 → single-erisc fallback.
 
-### Reference M4 numbers (SmolLM2-135M) — measured on `tens` (2026-11-22)
+### Reference M4 numbers (SmolLM2-135M) — measured on `tens` (2026-11-22, re-checked 2026-11-23)
 
 | Metric | Default path | `TENSCUDA_DECODE_PAUSE_MODES=1` |
 |--------|--------------|-----------------------------------|
-| `trace_cost` trace ms | **22.7** | **22.5** |
-| `trace_cost` sync ms | **32.9** | **33.6** |
-| `m4_replay_probe` mean decode ms | **~55** | **~45** (SmolLM2 pause compare **18.9%**) |
+| `trace_cost` trace ms | **22.7** (23-Nov: **21.9**) | **22.5** |
+| `trace_cost` sync ms | **32.9** (23-Nov: **32.2**) | **33.6** |
+| `m4_replay_probe` mean decode ms | **53.1** | **43.7** (**17.7%** faster; 22-Nov suite ~55 / ~45) |
 | `m4_pause_compare` Δ% (3 models) | SmolLM2 **18.9%**, TinyLlama **9.3%**, Llama-3.2-1B **7.4%** | |
 | `measure_decode_subset` warm tok/s | SmolLM2 **~18**, TinyLlama **~17.8**, Llama-3.2-1B **~19.2** | |
 | kv_diagnose | **8/8** | **8/8** |
@@ -95,6 +95,7 @@ Run on the card host with `PYTHONPATH=~/tenscuda` and `.venv/bin/python` (**one 
 ```bash
 cd ~/tenscuda && git pull
 git rev-parse HEAD   # paste into table above
+ls -l /dev/tenstorrent/0 && PYTHONPATH=. .venv/bin/python -c "import tenscuda; print(tenscuda.is_active)"
 .venv/bin/python scripts/trace_cost.py HuggingFaceTB/SmolLM2-135M-Instruct default
 TENSCUDA_DECODE_PAUSE_MODES=1 .venv/bin/python scripts/trace_cost.py HuggingFaceTB/SmolLM2-135M-Instruct default
 .venv/bin/python scripts/m4_pause_compare.py

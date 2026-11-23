@@ -322,8 +322,8 @@ Validated on decode subset (``results/m4_pause_compare_2026-11-22T181456Z.json``
 
 | SmolLM2-135M signal | legacy `rock` | **`tens`** |
 |---|---|---|
-| `trace_cost` trace / sync ms | ~102 / ~178 | **22.7 / 32.9** |
-| `m4_replay_probe` mean decode ms | ~282 (pause ~243, **14%**) | **~55 (pause ~45, 19%)** |
+| `trace_cost` trace / sync ms | ~102 / ~178 | **21.9 / 32.2** (23-Nov) |
+| `m4_replay_probe` mean decode ms | ~282 (pause ~243, **14%**) | **53.1** (pause **43.7**, **17.7%**, 23-Nov) |
 | Subset warm tok/s (functional decode) | ~3.5 | **~18** |
 | Matrix warm tok/s (HF loop) | ~3.55 | **~17.8** (first run **8 s**, compile **9.8 s**) |
 | CPU ref tok/s (same host) | ~15 fp32 | **~38 fp32** |

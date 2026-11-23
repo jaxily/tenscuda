@@ -57,6 +57,19 @@ wget https://github.com/tenstorrent/sfpi/releases/download/7.69.0/sfpi_7.69.0_x8
 tar -xJf sfpi_7.69.0_x86_64_debian.txz -C "$R"     # creates $R/sfpi
 ```
 
+### Card host (Ubuntu + KMD)
+
+On a bare metal Ubuntu box: install [tt-kmd](https://github.com/tenstorrent/tt-kmd) (we use **2.11.0**),
+**disable Secure Boot** if `modprobe tenstorrent` fails with *Key was rejected by service*, then:
+
+```bash
+scripts/bootstrap_card_host.sh   # or manual: sudo modprobe tenstorrent
+ls -l /dev/tenstorrent/0       # KMD 2.11+: not /dev/tenstorrent0
+PYTHONPATH=. .venv/bin/python -c "import tenscuda; print(tenscuda.is_active)"  # True
+```
+
+Full host notes: [docs/HARDWARE_BASELINE.md](docs/HARDWARE_BASELINE.md).
+
 Then either add one line to your script:
 
 ```python
@@ -157,7 +170,9 @@ Add a model with one command: `python scripts/matrix.py <hf-model-id>`.
 ## M4 benchmark environment (decode speed)
 
 Default generate keeps full torch-function modes for parity. For **measured decode speed** on a
-P150 (validated on SmolLM2, TinyLlama, Llama-3.2-1B — see [docs/DAY_REPORT_2026-11-22.md](docs/DAY_REPORT_2026-11-22.md)):
+P150 (validated on SmolLM2, TinyLlama, Llama-3.2-1B — see [docs/DAY_REPORT_2026-11-22.md](docs/DAY_REPORT_2026-11-22.md)).
+On host **`tens`** (Ryzen 9700X), `m4_replay_probe` SmolLM2 is ~**53 ms/step** default, ~**44 ms** with
+pause (~**18%** faster); see [BENCHMARK_REPORT_tens_2026-11-22.md](docs/BENCHMARK_REPORT_tens_2026-11-22.md).
 
 ```bash
 # A/B table (3 models or one model id)
