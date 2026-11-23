@@ -8,9 +8,10 @@
   "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
   "dtype": "float32",
   "prompt_tokens": 40,
-  "load_s": 3.5,
-  "decode_tok_per_s": 7.85,
-  "peak_rss_gib": 2.68,
+  "load_s": 33.1,
+  "decode_tok_per_s": 18.59,
+  "peak_rss_gib": 2.73,
+  "peak_anon_gib": 1.75,
   "tokens": [
    504,
    6376,
@@ -62,7 +63,7 @@
    2.4158,
    0.5541,
    0.9271,
-   4.0171,
+   4.017,
    3.2595,
    1.364,
    1.5928,
@@ -86,14 +87,14 @@
   "mode": "stream",
   "weight_dtype": null,
   "n_overridden": 0,
-  "load_s": 0.9,
-  "peak_rss_gib_baseline": 0.63,
-  "peak_rss_gib_after_load": 0.7,
-  "peak_rss_gib_end": 1.52,
-  "peak_anon_rss_gib": 0.54,
-  "peak_file_rss_gib": 1.08,
+  "load_s": 0.8,
+  "peak_rss_gib_baseline": 1.66,
+  "peak_rss_gib_after_load": 2.05,
+  "peak_rss_gib_end": 2.55,
+  "peak_anon_rss_gib": 1.73,
+  "peak_file_rss_gib": 0.97,
   "xla_compiles": 8,
-  "xla_compile_s": 69.9,
+  "xla_compile_s": 10.8,
   "cpu_fallback_ops": [
    "aten::_local_scalar_dense"
   ],
@@ -107,9 +108,9 @@
   "runs": [
    {
     "run": 0,
-    "total_s": 56.93,
-    "prefill_s": 23.537,
-    "decode_tok_per_s": 0.93,
+    "total_s": 18.34,
+    "prefill_s": 9.629,
+    "decode_tok_per_s": 3.56,
     "tokens": [
      504,
      6376,
@@ -147,9 +148,9 @@
    },
    {
     "run": 1,
-    "total_s": 9.59,
-    "prefill_s": 0.342,
-    "decode_tok_per_s": 3.35,
+    "total_s": 1.93,
+    "prefill_s": 0.072,
+    "decode_tok_per_s": 16.69,
     "tokens": [
      504,
      6376,
@@ -187,9 +188,9 @@
    },
    {
     "run": 2,
-    "total_s": 9.68,
-    "prefill_s": 0.341,
-    "decode_tok_per_s": 3.32,
+    "total_s": 1.95,
+    "prefill_s": 0.071,
+    "decode_tok_per_s": 16.52,
     "tokens": [
      504,
      6376,
@@ -227,9 +228,9 @@
    },
    {
     "run": 3,
-    "total_s": 9.6,
-    "prefill_s": 0.342,
-    "decode_tok_per_s": 3.35,
+    "total_s": 1.94,
+    "prefill_s": 0.071,
+    "decode_tok_per_s": 16.59,
     "tokens": [
      504,
      6376,

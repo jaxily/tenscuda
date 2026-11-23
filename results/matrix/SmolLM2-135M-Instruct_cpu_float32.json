@@ -2,9 +2,10 @@
  "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
  "dtype": "float32",
  "prompt_tokens": 40,
- "load_s": 1.0,
- "decode_tok_per_s": 15.43,
+ "load_s": 0.6,
+ "decode_tok_per_s": 38.12,
  "peak_rss_gib": 1.43,
+ "peak_anon_gib": 0.87,
  "tokens": [
   504,
   6376,

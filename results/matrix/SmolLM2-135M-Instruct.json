@@ -8,9 +8,10 @@
   "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
   "dtype": "float32",
   "prompt_tokens": 40,
-  "load_s": 1.0,
-  "decode_tok_per_s": 15.43,
+  "load_s": 0.6,
+  "decode_tok_per_s": 38.12,
   "peak_rss_gib": 1.43,
+  "peak_anon_gib": 0.87,
   "tokens": [
    504,
    6376,
@@ -86,14 +87,14 @@
   "mode": "stream",
   "weight_dtype": null,
   "n_overridden": 0,
-  "load_s": 1.2,
-  "peak_rss_gib_baseline": 0.63,
-  "peak_rss_gib_after_load": 0.7,
-  "peak_rss_gib_end": 1.09,
-  "peak_anon_rss_gib": 0.57,
-  "peak_file_rss_gib": 0.66,
+  "load_s": 0.5,
+  "peak_rss_gib_baseline": 1.66,
+  "peak_rss_gib_after_load": 1.91,
+  "peak_rss_gib_end": 2.14,
+  "peak_anon_rss_gib": 1.71,
+  "peak_file_rss_gib": 0.62,
   "xla_compiles": 8,
-  "xla_compile_s": 62.1,
+  "xla_compile_s": 9.6,
   "cpu_fallback_ops": [
    "aten::_local_scalar_dense"
   ],
@@ -107,9 +108,9 @@
   "runs": [
    {
     "run": 0,
-    "total_s": 49.72,
-    "prefill_s": 19.907,
-    "decode_tok_per_s": 1.04,
+    "total_s": 7.95,
+    "prefill_s": 3.075,
+    "decode_tok_per_s": 6.37,
     "tokens": [
      504,
      6376,
@@ -147,9 +148,9 @@
    },
    {
     "run": 1,
-    "total_s": 9.15,
-    "prefill_s": 0.327,
-    "decode_tok_per_s": 3.51,
+    "total_s": 1.78,
+    "prefill_s": 0.068,
+    "decode_tok_per_s": 18.16,
     "tokens": [
      504,
      6376,
@@ -187,9 +188,9 @@
    },
    {
     "run": 2,
-    "total_s": 9.02,
-    "prefill_s": 0.321,
-    "decode_tok_per_s": 3.57,
+    "total_s": 1.78,
+    "prefill_s": 0.064,
+    "decode_tok_per_s": 18.03,
     "tokens": [
      504,
      6376,
@@ -227,9 +228,9 @@
    },
    {
     "run": 3,
-    "total_s": 9.02,
-    "prefill_s": 0.32,
-    "decode_tok_per_s": 3.56,
+    "total_s": 1.79,
+    "prefill_s": 0.067,
+    "decode_tok_per_s": 17.97,
     "tokens": [
      504,
      6376,

@@ -330,4 +330,6 @@ Validated on decode subset (``results/m4_pause_compare_2026-11-22T181456Z.json``
 
 Pause modes still help on **`tens`** (`m4_pause_compare_2026-11-23T070017Z.json`): SmolLM2 **18.9%**, TinyLlama **9.3%**, Llama-3.2-1B **7.4%**. **NVIDIA CUDA reference:** deferred — same matrix prompt/harness on a CUDA box later (`results/nvidia_ref_*.json`).
 
+**Optional flags on `tens` (Nov 22):** ``TENSCUDA_THIN_DECODE=1`` — **8/8** kv, **32/32** tokens; ``TENSCUDA_LOADER_PREFETCH=1`` — TinyLlama load **0.66 s → 0.59 s**; full matrix + report in [BENCHMARK_REPORT_tens_2026-11-22.md](BENCHMARK_REPORT_tens_2026-11-22.md).
+
 **Optional flags on legacy rock (Nov 22):** ``TENSCUDA_THIN_DECODE=1`` — parity gate 8/8, 32/32 tokens; ``TENSCUDA_LOADER_PREFETCH=1`` — TinyLlama load **1.46 s → 1.21 s**; matrix ``--pause-benchmark`` on SmolLM2 **14.3%** pause Δ (243.7 ms).

@@ -16,21 +16,22 @@ batch 1, the chat prompt "Explain in two sentences why the sky is blue." and 32 
 - **first run s**: the first generate call, including TT-MLIR compilation.
 - **peak host RSS**: process VmHWM after loading weights, and at the end.
 - **CPU tok/s**: the CPU reference's decode speed on the same host (4 threads), for scale.
+- **M4 pause Δ%**: only when the row was measured with `python scripts/matrix.py MODEL --pause-benchmark` (``TENSCUDA_DECODE_PAUSE_MODES=1`` vs default replay probe).
 
-| model | params | arch | status | parity vs CPU | warm tok/s (TT) | first run s | peak host RSS (TT) | CPU tok/s | notes |
-|---|---|---|---|---|---|---|---|---|---|
-| HuggingFaceTB/SmolLM2-135M-Instruct | 135M | llama | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 3.55 (3.51-3.57) | 50 | 0.57 GiB anon (VmHWM 1.09) | 15.43 (float32) | compile 62.1 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| HuggingFaceTB/SmolLM2-360M-Instruct | 362M | llama | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 3.34 (3.32-3.35) | 57 | 0.54 GiB anon (VmHWM 1.52) | 7.85 (float32) | compile 69.9 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| Qwen/Qwen2.5-0.5B-Instruct | 494M | qwen2 | works (near-tie) | 16/32 vs CPU float32; CPU top-2 margin 0.2066 at step 16; teacher-forced top-1 32/32 | 4.06 (4.01-4.11) | 45 | 0.62 GiB anon (VmHWM 1.8) | 6.51 (float32) | compile 53.5 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| TinyLlama/TinyLlama-1.1B-Chat-v1.0 | 1.10B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 4.53 (4.51-4.54) | 33 | 0.6 GiB anon (VmHWM 2.87) | 6.05 (bfloat16) | compile 36.2 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| unsloth/Llama-3.2-1B-Instruct | 1.24B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 5.95 (5.91-6.00) | 22 | 0.69 GiB anon (VmHWM 3.28) | 5.41 (bfloat16) | compile 21.7 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| Qwen/Qwen2.5-1.5B-Instruct | 1.54B | qwen2 | works (near-tie) | 28/32 vs CPU bfloat16; CPU top-2 margin 0.0 at step 28; teacher-forced top-1 31/32 (CPU margins 0.0) | 3.40 (3.39-3.43) | 57 | 0.59 GiB anon (VmHWM 3.76) | 2.43 (bfloat16) | compile 70.3 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| HuggingFaceTB/SmolLM2-1.7B-Instruct | 1.71B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 4.59 (4.57-4.62) | 41 | 0.58 GiB anon (VmHWM 3.75) | 3.7 (bfloat16) | compile 41.4 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| unsloth/gemma-2-2b-it | 2.61B | gemma2 | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 2.27 (2.27-2.28) | 792 | 2.2 GiB anon (VmHWM 4.48) | 0.32 (bfloat16) | compile 782.1 s / 39 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| Qwen/Qwen2.5-3B-Instruct | 3.09B | qwen2 | works (near-tie) | 6/32 vs CPU bfloat16; CPU top-2 margin 0.0 at step 6; teacher-forced top-1 29/32 (CPU margins 0.0, 0.125, 0.125) | 2.63 (2.62-2.65) | 139 | 0.49 GiB anon (VmHWM 2.79) | 0.12 (bfloat16) | compile 112.9 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| unsloth/Llama-3.2-3B-Instruct | 3.21B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 3.52 (3.51-3.53) | 108 | 0.56 GiB anon (VmHWM 3.97) | 0.1 (bfloat16) | compile 57.5 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| microsoft/Phi-3.5-mini-instruct | 3.82B | phi3 | works (near-tie) | 6/32 vs CPU bfloat16; CPU top-2 margin 0.25 at step 6; teacher-forced top-1 31/32 (CPU margins 0.25) | 2.67 (2.66-2.68) | 640 | 0.55 GiB anon (VmHWM 3.26) | 0.11 (bfloat16) | compile 616.0 s / 71 graphs; CPU fallbacks: aten::_local_scalar_dense |
-| unsloth/Meta-Llama-3.1-8B-Instruct | 8.03B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 3.00 (2.99-3.02) | 198 | 0.52 GiB anon (VmHWM 4.04) | 0.03 (bfloat16) | compile 74.0 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| model | params | arch | status | parity vs CPU | warm tok/s (TT) | first run s | peak host RSS (TT) | CPU tok/s | M4 pause Δ% | notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| HuggingFaceTB/SmolLM2-135M-Instruct | 135M | llama | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 18.05 (17.97-18.16) | 8 | 1.71 GiB anon (VmHWM 2.14) | 38.12 (float32) | - | compile 9.6 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| HuggingFaceTB/SmolLM2-360M-Instruct | 362M | llama | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 16.60 (16.52-16.69) | 18 | 1.73 GiB anon (VmHWM 2.55) | 18.59 (float32) | - | compile 10.8 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| Qwen/Qwen2.5-0.5B-Instruct | 494M | qwen2 | works (near-tie) | 16/32 vs CPU float32; CPU top-2 margin 0.2066 at step 16; teacher-forced top-1 32/32 | 20.20 (20.16-20.24) | 20 | 1.74 GiB anon (VmHWM 2.84) | 13.87 (float32) | - | compile 8.2 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| TinyLlama/TinyLlama-1.1B-Chat-v1.0 | 1.10B | llama | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 17.95 (17.90-18.03) | 6 | 1.67 GiB anon (VmHWM 3.9) | 8.92 (float32) | - | compile 5.7 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| unsloth/Llama-3.2-1B-Instruct | 1.24B | llama | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 19.27 (19.24-19.32) | 4 | 2.07 GiB anon (VmHWM 4.31) | 7.91 (float32) | - | compile 3.5 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| Qwen/Qwen2.5-1.5B-Instruct | 1.54B | qwen2 | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 13.17 (13.11-13.21) | 21 | 1.93 GiB anon (VmHWM 4.8) | 5.27 (float32) | - | compile 10.8 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| HuggingFaceTB/SmolLM2-1.7B-Instruct | 1.71B | llama | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 14.35 (14.33-14.36) | 11 | 1.65 GiB anon (VmHWM 5.04) | 5.63 (float32) | - | compile 6.4 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| unsloth/gemma-2-2b-it | 2.61B | gemma2 | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 7.94 (7.92-7.95) | 137 | 5.83 GiB anon (VmHWM 6.92) | 3.39 (float32) | - | compile 120.4 s / 39 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| Qwen/Qwen2.5-3B-Instruct | 3.09B | qwen2 | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 8.29 (8.29-8.30) | 23 | 4.84 GiB anon (VmHWM 5.82) | 3.15 (float32) | - | compile 17.1 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| unsloth/Llama-3.2-3B-Instruct | 3.21B | llama | works | 32/32 vs CPU float32; teacher-forced top-1 32/32 | 8.89 (8.88-8.91) | 21 | 5.23 GiB anon (VmHWM 6.75) | 2.91 (float32) | - | compile 8.6 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| microsoft/Phi-3.5-mini-instruct | 3.82B | phi3 | works (near-tie) | 6/32 vs CPU float32; CPU top-2 margin 0.036 at step 6; teacher-forced top-1 31/32 (CPU margins 0.036) | 6.89 (6.82-6.94) | 110 | 5.92 GiB anon (VmHWM 6.81) | 2.54 (float32) | - | compile 94.4 s / 71 graphs; CPU fallbacks: aten::_local_scalar_dense |
+| unsloth/Meta-Llama-3.1-8B-Instruct | 8.03B | llama | works | 32/32 vs CPU bfloat16; teacher-forced top-1 32/32 | 4.88 (4.87-4.89) | 29 | 5.82 GiB anon (VmHWM 6.72) | 3.06 (bfloat16) | - | compile 12.1 s / 8 graphs; CPU fallbacks: aten::_local_scalar_dense |
 
 Notes:
 

@@ -8,9 +8,10 @@
   "model": "Qwen/Qwen2.5-0.5B-Instruct",
   "dtype": "float32",
   "prompt_tokens": 40,
-  "load_s": 99.2,
-  "decode_tok_per_s": 6.51,
-  "peak_rss_gib": 3.05,
+  "load_s": 25.1,
+  "decode_tok_per_s": 13.87,
+  "peak_rss_gib": 3.57,
+  "peak_anon_gib": 2.36,
   "tokens": [
    785,
    12884,
@@ -58,8 +59,8 @@
    4.8988,
    1.2716,
    0.707,
-   1.0751,
-   0.7293,
+   1.0752,
+   0.7292,
    1.5938,
    0.3129,
    0.2066,
@@ -86,14 +87,14 @@
   "mode": "stream",
   "weight_dtype": null,
   "n_overridden": 0,
-  "load_s": 0.9,
-  "peak_rss_gib_baseline": 0.62,
-  "peak_rss_gib_after_load": 0.85,
-  "peak_rss_gib_end": 1.8,
-  "peak_anon_rss_gib": 0.62,
-  "peak_file_rss_gib": 1.33,
+  "load_s": 0.3,
+  "peak_rss_gib_baseline": 1.66,
+  "peak_rss_gib_after_load": 1.94,
+  "peak_rss_gib_end": 2.84,
+  "peak_anon_rss_gib": 1.74,
+  "peak_file_rss_gib": 1.03,
   "xla_compiles": 8,
-  "xla_compile_s": 53.5,
+  "xla_compile_s": 8.2,
   "cpu_fallback_ops": [
    "aten::_local_scalar_dense"
   ],
@@ -107,9 +108,9 @@
   "runs": [
    {
     "run": 0,
-    "total_s": 45.22,
-    "prefill_s": 19.833,
-    "decode_tok_per_s": 1.22,
+    "total_s": 20.23,
+    "prefill_s": 12.829,
+    "decode_tok_per_s": 4.19,
     "tokens": [
      785,
      12884,
@@ -147,9 +148,9 @@
    },
    {
     "run": 1,
-    "total_s": 8.01,
-    "prefill_s": 0.281,
-    "decode_tok_per_s": 4.01,
+    "total_s": 1.6,
+    "prefill_s": 0.059,
+    "decode_tok_per_s": 20.16,
     "tokens": [
      785,
      12884,
@@ -187,9 +188,9 @@
    },
    {
     "run": 2,
-    "total_s": 7.92,
-    "prefill_s": 0.281,
-    "decode_tok_per_s": 4.06,
+    "total_s": 1.6,
+    "prefill_s": 0.059,
+    "decode_tok_per_s": 20.2,
     "tokens": [
      785,
      12884,
@@ -227,9 +228,9 @@
    },
    {
     "run": 3,
-    "total_s": 7.83,
-    "prefill_s": 0.282,
-    "decode_tok_per_s": 4.11,
+    "total_s": 1.59,
+    "prefill_s": 0.058,
+    "decode_tok_per_s": 20.24,
     "tokens": [
      785,
      12884,

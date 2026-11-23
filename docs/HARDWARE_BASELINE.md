@@ -40,6 +40,16 @@ Artifacts: `results/tens_host/m4_*`, `results/tens_host/tens_m4_suite.log` (sync
 
 Compare against **legacy rock** (i7-6700 / 8 GB): trace ~102 / sync ~178 ms, replay ~282 / ~243 ms, warm ~3.5 tok/s — **host upgrade dominates decode wall time on SmolLM2.**
 
+### Optional flags (`tens`, 2026-11-22)
+
+| Flag | Result |
+|------|--------|
+| `TENSCUDA_DECODE_PAUSE_MODES=1` | SmolLM2 replay **18.9%** faster (env sweep replay **53.4 → 43.2 ms**) |
+| `TENSCUDA_THIN_DECODE=1` | **8/8** kv, **32/32** tokens |
+| `TENSCUDA_LOADER_PREFETCH=1` | TinyLlama stream load **0.66 s → 0.59 s** |
+
+Full report: [BENCHMARK_REPORT_tens_2026-11-22.md](BENCHMARK_REPORT_tens_2026-11-22.md).
+
 ---
 
 ## Legacy reference host (rock, pre-upgrade)
