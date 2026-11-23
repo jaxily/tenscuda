@@ -85,8 +85,8 @@ model = load_causal_lm("TinyLlama/TinyLlama-1.1B-Chat-v1.0")   # meta skeleton +
 | | |
 |---|---|
 | Card | Tenstorrent Blackhole P150a (one card) |
-| Host (current) | Ubuntu 24.04, **Intel Core i7-9700**, **32 GB RAM**, 1200 W PSU, PCIe to P150 (re-benchmark in progress — [HARDWARE_BASELINE.md](docs/HARDWARE_BASELINE.md)) |
-| Host (legacy) | i7-6700, 8 GB — most tok/s numbers in PERF/COMPATIBILITY through Nov 2025 |
+| Host (current) | **`tens`** — Ubuntu 24.04, **AMD Ryzen 7 9700X**, **~30 GiB RAM**, Gigabyte B850, KMD 2.11.0, Secure Boot off — [HARDWARE_BASELINE.md](docs/HARDWARE_BASELINE.md) |
+| Host (legacy) | **`rock`** — i7-6700, 8 GB — historical matrix through Nov 2025 |
 | System stack | tt-metal v0.82, KMD 2.11.0, firmware bundle 18.10.0 |
 | Python stack | Python 3.12, torch 2.11.0+cpu, torch-xla 2.9.0 (TT build), pjrt-plugin-tt 1.5.0.dev20260831, transformers 5.17.0 |
 
@@ -173,6 +173,27 @@ are experimental — run `scripts/m4_pause_parity_gate.py` after changes. Shape 
 [docs/COMPILE_AND_SHAPES.md](docs/COMPILE_AND_SHAPES.md). Host records: [docs/HARDWARE_BASELINE.md](docs/HARDWARE_BASELINE.md).
 
 Matrix rows can record pause delta: `python scripts/matrix.py MODEL --pause-benchmark`.
+
+## Card monitor (Ubuntu)
+
+A GNOME System Monitor–style live view of the Tenstorrent card (temperature, power, AI clock,
+host memory) plus the current TensCUDA workload when a bench/load is running.
+
+**Install from the `.deb`** (Ubuntu 24.04):
+
+```bash
+sudo apt install ./dist/tenscuda-monitor_0.1.0_all.deb
+# rebuild: bash scripts/build_monitor_deb.sh
+```
+
+Or from a git checkout without the package:
+
+```bash
+sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1
+bash scripts/install_monitor_on_host.sh
+```
+
+Then open **TensCUDA Monitor** from Activities, or run `tenscuda-monitor`. See [packaging/README.md](packaging/README.md).
 
 ## Benchmark your card
 

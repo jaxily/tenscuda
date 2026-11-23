@@ -15,3 +15,5 @@ results/prof_*
 dl8b.log
 *.pt
 results/*.log
+monitor/icons/tenscuda-monitor-icon.jpg
+monitor/icons/tenscuda-monitor-icon.png

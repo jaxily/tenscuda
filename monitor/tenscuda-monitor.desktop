@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=TensCUDA Monitor
+GenericName=Card Monitor
+Comment=Live Tenstorrent card resources — temperature, power, AI clock, host memory
+Exec=tenscuda-monitor
+Icon=dev.tenscuda.Monitor
+Terminal=false
+Categories=System;Monitor;Utility;
+Keywords=tenstorrent;blackhole;tenscuda;gpu;temperature;power;card;
+StartupNotify=true
+StartupWMClass=dev.tenscuda.Monitor
+DBusActivatable=false
+X-GNOME-UsesNotifications=false

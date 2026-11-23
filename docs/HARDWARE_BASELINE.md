@@ -2,35 +2,43 @@
 
 Record **one row per host** so performance comparisons stay apples-to-apples when the motherboard, CPU, or PCIe layout changes. Software SHA and harness env must match when comparing old vs new rows.
 
-## Primary test host (upgrade in progress)
+## Primary test host (`tens`)
 
-Card host upgraded **Nov 2025** (user-reported). Re-run the day-one suite below and fill in measured columns.
+SSH alias **`tens`** (192.168.1.210). Card host rebuilt **Nov 2025** with Ryzen 9700X; KMD + venv SFPI 7.69.0 on **2026-11-22**.
 
 | Field | Value |
 |-------|--------|
-| Nickname | `rock` (SSH alias; same machine after rebuild) |
-| CPU | **Intel Core i7-9700** (8c/8t; confirm with `lscpu` after install) |
-| Host RAM | **32 GB** |
-| PSU | **1200 W** |
-| Motherboard | *TBD* — record model from BIOS or `dmidecode -t baseboard` |
-| PCIe | *TBD* — `lspci -vv` (Gen/lanes to P150) |
-| IOMMU | *TBD* |
-| Card | Tenstorrent Blackhole P150a ×1 |
-| OS | Ubuntu 24.04 (expected) |
+| Nickname | `tens` |
+| CPU | **AMD Ryzen 7 9700X** (8c/16t) |
+| Host RAM | **~30 GiB** |
+| PSU | (stock) |
+| Motherboard | **Gigabyte B850 GAMING X WIFI6E** (UMD tray_id fallback; bus 0x1) |
+| PCIe | *pending `sudo lspci -vv`* — card at `01:00.0`, BusMaster+ after KMD |
+| IOMMU | **enabled** (UMD log) |
+| Secure Boot | **disabled** (required for unsigned `tenstorrent` DKMS) |
+| Card | Tenstorrent Blackhole P150a ×1, firmware bundle **18.10.0** |
+| OS | Ubuntu 24.04, kernel **7.0.0-43-generic** |
+| KMD | **2.11.0** (`tenstorrent-dkms`) |
 | Stack | See [README](../README.md) quickstart pins |
-| M4 numbers | **Pending** — run checklist below |
+| TensCUDA commit | `a4a9d26` (rsync from dev; host has no `git` yet) |
+| M4 numbers | **2026-11-22** suite on `tens` (see below) |
 
-### Reference M4 numbers (SmolLM2-135M) — *pending on new host*
+UMD notes (non-fatal): `Setting power state failed: Remote I/O error`; eth FW 1.6.0 → single-erisc fallback.
+
+### Reference M4 numbers (SmolLM2-135M) — measured on `tens` (2026-11-22)
 
 | Metric | Default path | `TENSCUDA_DECODE_PAUSE_MODES=1` |
 |--------|--------------|-----------------------------------|
-| `trace_cost` trace ms | — | — |
-| `trace_cost` sync ms | — | — |
-| `m4_replay_probe` mean decode ms | — | — |
-| `m4_pause_compare` Δ% | — | — |
-| kv_diagnose | — | — |
+| `trace_cost` trace ms | **22.7** | **22.5** |
+| `trace_cost` sync ms | **32.9** | **33.6** |
+| `m4_replay_probe` mean decode ms | **~55** | **~45** (SmolLM2 pause compare **18.9%**) |
+| `m4_pause_compare` Δ% (3 models) | SmolLM2 **18.9%**, TinyLlama **9.3%**, Llama-3.2-1B **7.4%** | |
+| `measure_decode_subset` warm tok/s | SmolLM2 **~18**, TinyLlama **~17.8**, Llama-3.2-1B **~19.2** | |
+| kv_diagnose | **8/8** | **8/8** |
 
-Compare against **legacy rock** row below after first suite completes.
+Artifacts: `results/tens_host/m4_*`, `results/tens_host/tens_m4_suite.log` (synced from `tens`).
+
+Compare against **legacy rock** (i7-6700 / 8 GB): trace ~102 / sync ~178 ms, replay ~282 / ~243 ms, warm ~3.5 tok/s — **host upgrade dominates decode wall time on SmolLM2.**
 
 ---
 

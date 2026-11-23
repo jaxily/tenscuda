@@ -1,0 +1,29 @@
+{
+  "recorded_at": "2026-11-22",
+  "gates": [
+    {
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "kv_parity_resident_vs_safe": "8/8",
+      "trace_tokens_agree_prefix": "32/32",
+      "tokens_identical": true,
+      "trace_ms_baseline": 101.0,
+      "trace_ms_pause": 101.7
+    },
+    {
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "kv_parity_resident_vs_safe": "8/8",
+      "trace_tokens_agree_prefix": "32/32",
+      "tokens_identical": true,
+      "trace_ms_baseline": 75.0,
+      "trace_ms_pause": 75.5
+    },
+    {
+      "model": "unsloth/Llama-3.2-1B-Instruct",
+      "kv_parity_resident_vs_safe": "8/8",
+      "trace_tokens_agree_prefix": "32/32",
+      "tokens_identical": true,
+      "trace_ms_baseline": 56.8,
+      "trace_ms_pause": 56.5
+    }
+  ]
+}

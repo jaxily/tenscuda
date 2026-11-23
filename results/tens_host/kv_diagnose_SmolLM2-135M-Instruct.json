@@ -1,0 +1,43 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "n_new": 8,
+  "chunk": 4,
+  "safe_tokens": [
+    504,
+    6376,
+    4541,
+    4461,
+    975,
+    260,
+    2591,
+    506
+  ],
+  "resident_sync_per_step_tokens": [
+    504,
+    6376,
+    4541,
+    4461,
+    975,
+    260,
+    2591,
+    506
+  ],
+  "chunked_one_sync_per_launch_tokens": [
+    504,
+    6376,
+    314,
+    4461,
+    6376,
+    314,
+    975,
+    260
+  ],
+  "parity_resident_vs_safe": "8/8",
+  "parity_batched_vs_safe": "3/8",
+  "seconds": {
+    "safe": 33.5,
+    "resident": 7.58,
+    "batched_bug": 50.18
+  },
+  "diagnosis": "StaticCache must see one torch_xla.sync() between each decode forward. Resident chunking with per-step sync should match static_greedy_generate; deferring sync across multiple forwards in one lazy graph yields wrong tokens."
+}

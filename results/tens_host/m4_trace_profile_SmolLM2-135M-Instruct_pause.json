@@ -1,0 +1,106 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "warm_steps": 10,
+  "profile_wall_s": 0.5,
+  "ms_per_step_approx": 50.3,
+  "top_cumulative_stats": [
+    {
+      "line": "110448 function calls (96049 primitive calls) in 0.503 seconds"
+    },
+    {
+      "line": "1    0.001    0.001    0.503    0.503 /home/jake/tenscuda/tenscuda/generate.py:110(static_greedy_generate)"
+    },
+    {
+      "line": "2558    0.002    0.000    0.330    0.000 /home/jake/tenscuda/tenscuda/_patch.py:202(__torch_function__)"
+    },
+    {
+      "line": "3338    0.003    0.000    0.325    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/tt_torch/torch_overrides.py:96(__torch_function__)"
+    },
+    {
+      "line": "30/10    0.304    0.010    0.304    0.030 {method 'cpu' of 'torch._C.TensorBase' objects}"
+    },
+    {
+      "line": "3960/10    0.002    0.000    0.180    0.018 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1775(_wrapped_call_impl)"
+    },
+    {
+      "line": "3960/10    0.004    0.000    0.180    0.018 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1783(_call_impl)"
+    },
+    {
+      "line": "10    0.000    0.000    0.180    0.018 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/utils/generic.py:933(wrapper)"
+    },
+    {
+      "line": "10    0.000    0.000    0.180    0.018 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:436(forward)"
+    },
+    {
+      "line": "10    0.000    0.000    0.179    0.018 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/utils/generic.py:1006(wrapper)"
+    },
+    {
+      "line": "10    0.000    0.000    0.179    0.018 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/utils/output_capturing.py:249(wrapper)"
+    },
+    {
+      "line": "10    0.001    0.000    0.179    0.018 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:364(forward)"
+    },
+    {
+      "line": "300    0.000    0.000    0.172    0.001 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/modeling_layers.py:80(__call__)"
+    },
+    {
+      "line": "300    0.003    0.000    0.171    0.001 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:295(forward)"
+    },
+    {
+      "line": "9    0.000    0.000    0.164    0.018 /home/jake/tenscuda/tenscuda/generate.py:78(_forward_decode_step)"
+    },
+    {
+      "line": "300    0.006    0.000    0.127    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:243(forward)"
+    },
+    {
+      "line": "300    0.001    0.000    0.050    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/integrations/sdpa_attention.py:79(sdpa_attention_forward)"
+    },
+    {
+      "line": "300    0.031    0.000    0.039    0.000 {built-in method torch._C._nn.scaled_dot_product_attention}"
+    },
+    {
+      "line": "1    0.000    0.000    0.033    0.033 /home/jake/tenscuda/tenscuda/generate.py:65(_forward_prefill)"
+    },
+    {
+      "line": "300    0.000    0.000    0.026    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/cache_utils.py:1370(update)"
+    },
+    {
+      "line": "300    0.002    0.000    0.026    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/cache_utils.py:457(update)"
+    },
+    {
+      "line": "610    0.009    0.000    0.024    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:62(forward)"
+    },
+    {
+      "line": "2110    0.001    0.000    0.022    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/torch/nn/modules/linear.py:130(forward)"
+    },
+    {
+      "line": "2532/2110    0.020    0.000    0.021    0.000 {built-in method torch._C._nn.linear}"
+    },
+    {
+      "line": "300    0.005    0.000    0.020    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:137(apply_rotary_pos_emb)"
+    },
+    {
+      "line": "10    0.000    0.000    0.016    0.002 /home/jake/tenscuda/tenscuda/generate.py:23(_sync)"
+    },
+    {
+      "line": "10    0.000    0.000    0.016    0.002 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/torch_xla/torch_xla.py:78(sync)"
+    },
+    {
+      "line": "300    0.001    0.000    0.014    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:174(forward)"
+    },
+    {
+      "line": "10    0.012    0.001    0.012    0.001 {built-in method _XLAC._xla_step_marker}"
+    },
+    {
+      "line": "600    0.007    0.000    0.012    0.000 /home/jake/tenscuda/.venv/lib/python3.12/site-packages/transformers/models/llama/modeling_llama.py:130(rotate_half)"
+    }
+  ],
+  "stack_tags_in_top30": {
+    "tt_torch": 1,
+    "transformers": 15,
+    "tenscuda": 9,
+    "torch_xla": 1,
+    "other": 4
+  },
+  "decode_pause_modes": true
+}

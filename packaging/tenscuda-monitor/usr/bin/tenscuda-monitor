@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# System install launcher for the TensCUDA Monitor .deb
+set -euo pipefail
+export PYTHONPATH="/usr/lib/tenscuda-monitor${PYTHONPATH:+:$PYTHONPATH}"
+
+if [[ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+  export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=${XDG_RUNTIME_DIR}/bus}"
+  if [[ -z "${WAYLAND_DISPLAY:-}" && -S "${XDG_RUNTIME_DIR}/wayland-0" ]]; then
+    export WAYLAND_DISPLAY=wayland-0
+  fi
+  if [[ -z "${DISPLAY:-}" && -S /tmp/.X11-unix/X0 ]]; then
+    export DISPLAY=:0
+  fi
+fi
+
+exec python3 -m monitor "$@"

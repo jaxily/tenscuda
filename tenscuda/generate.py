@@ -140,6 +140,13 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
 
     out = []
     timings = []
+    try:
+        from monitor.activity import emit as _activity
+    except Exception:
+        def _activity(*_a, **_k):
+            pass
+    model_id = getattr(getattr(model, "config", None), "name_or_path", None) or getattr(model, "name_or_path", None)
+    _activity("decoding", model=model_id, new_tokens=max_new_tokens)
     with torch.no_grad():
         t = time.time()
         logits = _forward_prefill(fwd, model, ids_cpu, cache, dev)
@@ -159,6 +166,19 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
             timings.append(time.time() - t)
             out.append(nxt)
             cur += 1
+            # Live rolling tok/s for the monitor chart (decode steps only).
+            dec = timings[1:]
+            if dec and sum(dec) > 0 and (len(dec) == 1 or len(dec) % 2 == 0):
+                _activity(
+                    "decoding",
+                    model=model_id,
+                    tok_s=round(len(dec) / sum(dec), 2),
+                    tokens=len(out),
+                    step_ms=round(dec[-1] * 1000, 1),
+                )
     if stats is not None:
         stats["step_seconds"] = timings
+    dec = timings[1:]
+    if dec and sum(dec) > 0:
+        _activity("decoding", model=model_id, tok_s=round(len(dec) / sum(dec), 2), tokens=len(out))
     return torch.cat([ids_cpu, torch.tensor([out])], dim=1).to(dev)

@@ -1,0 +1,26 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "buckets": [
+    {
+      "pad_to": 64,
+      "max_cache_len": 64,
+      "first_run_s": 45.46,
+      "warm_step_ms": 279.9,
+      "xla_compiles": 4
+    },
+    {
+      "pad_to": 128,
+      "max_cache_len": 128,
+      "first_run_s": 45.8,
+      "warm_step_ms": 280.9,
+      "xla_compiles": 4
+    },
+    {
+      "pad_to": 256,
+      "max_cache_len": 256,
+      "first_run_s": 56.21,
+      "warm_step_ms": 282.0,
+      "xla_compiles": 4
+    }
+  ]
+}

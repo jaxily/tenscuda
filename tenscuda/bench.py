@@ -252,13 +252,23 @@ def run_bench(model_key, quick=False, parity=True):
         print(f"[bench] CPU reference for {model_id} ...", flush=True)
         ref, ref_note = cpu_reference(model_id, n_params, new_tokens)
 
+    try:
+        from monitor.activity import emit as _activity
+    except Exception:
+        def _activity(*_a, **_k):
+            pass
+
+    n_params_label = f"{n_params / 1e6:.0f}M" if "n_params" in locals() else None
+
     print(f"[bench] loading {model_id} onto the card (streaming) ...", flush=True)
+    _activity("loading", model=model_id, params=n_params_label)
     tok = AutoTokenizer.from_pretrained(model_id)
     mon = RssMonitor()
     t = time.time()
     m = load_causal_lm(model_id, dtype=torch.bfloat16, verbose=False)
     load_s = time.time() - t
     rss_load = peak_rss_gib()
+    _activity("decoding", model=model_id, params=n_params_label, peak_rss_gib=round(rss_load, 2))
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from _cpu_ref import prompt_ids
 
@@ -271,11 +281,15 @@ def run_bench(model_key, quick=False, parity=True):
             o = static_greedy_generate(m, ids, max_new_tokens=new_tokens, stats=st)
             total = time.time() - t
             dec = st["step_seconds"][1:]
+            tok_s = round(len(dec) / sum(dec), 2) if dec and sum(dec) > 0 else 0.0
             runs.append({"total_s": round(total, 2), "first_token_s": round(st["step_seconds"][0], 3),
-                         "decode_tok_per_s": round(len(dec) / sum(dec), 2),
+                         "decode_tok_per_s": tok_s,
                          "tokens": o[0, ids.shape[1]:].cpu().tolist()})
+            _activity("decoding", model=model_id, params=n_params_label, tok_s=tok_s, run=r)
             print(f"[bench] run {r} ({'cold' if r == 0 else 'warm'}): {runs[-1]['decode_tok_per_s']} tok/s, "
                   f"{total:.1f} s", flush=True)
+    _activity("idle", model=model_id, params=n_params_label,
+              tok_s=runs[-1]["decode_tok_per_s"] if runs else None)
     toks = runs[-1]["tokens"]
     par = {"reference": ref_note if ref is None else f"CPU {ref_note}", "status": "skipped"}
     if ref is not None:

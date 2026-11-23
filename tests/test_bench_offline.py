@@ -24,7 +24,12 @@ def test_system_info_has_no_host_identity():
     s = json.dumps(info)
     import socket
 
-    assert socket.gethostname() not in s or len(socket.gethostname()) < 3
+    host = socket.gethostname()
+    if len(host) >= 3:
+        # Hostname must not leak as its own token (avoid false positives on "tens" vs "tenscuda").
+        for chunk in (info.get("host") or {}, info.get("cards") or []):
+            part = json.dumps(chunk)
+            assert host not in part, host
     assert "/home/" not in s
 
 

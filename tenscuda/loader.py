@@ -176,8 +176,21 @@ def load_causal_lm(model_id: str, dtype=torch.bfloat16, device=None, verbose=Tru
     except Exception:
         pass
     torch_xla.sync()
+    # Keep the human HF id (not the local snapshots/<hash> path) for monitor / tooling.
+    try:
+        config.name_or_path = model_id
+        model.config.name_or_path = model_id
+        model.name_or_path = model_id
+    except Exception:
+        pass
+    load_gib = round(nbytes / 2**30, 2)
+    try:
+        from monitor.activity import emit
+        emit("loading", model=model_id, load_gib=load_gib, tensors=len(loaded))
+    except Exception:
+        pass
     if verbose:
-        print(f"tenscuda loader: {len(loaded)} tensors, {nbytes/2**30:.2f} GiB -> {device} "
+        print(f"tenscuda loader: {len(loaded)} tensors, {load_gib} GiB -> {device} "
               f"in {time.time()-t0:.1f}s; rebuilt buffers: {len(fixed)}", flush=True)
     return model
 

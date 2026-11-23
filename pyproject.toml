@@ -16,4 +16,7 @@ hf = ["transformers>=5", "accelerate"]
 test = ["pytest"]
 
 [tool.setuptools]
-packages = ["tenscuda"]
+packages = ["tenscuda", "monitor"]
+
+[project.scripts]
+tenscuda-monitor = "monitor.app:main"

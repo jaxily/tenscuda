@@ -318,6 +318,16 @@ Validated on decode subset (``results/m4_pause_compare_2026-11-22T181456Z.json``
 
 **M4+ stable roadmap (Nov 22):** [COMPILE_AND_SHAPES.md](COMPILE_AND_SHAPES.md), [HARDWARE_BASELINE.md](HARDWARE_BASELINE.md), [TT_UPSTREAM.md](TT_UPSTREAM.md). Optional decode flags: ``TENSCUDA_THIN_DECODE=1``, ``TENSCUDA_LOADER_PREFETCH=1`` (measure before claiming wins).
 
-**Host upgrade (Nov 2025):** User moved test box to **i7-9700 / 32 GB / 1200 W PSU**; legacy i7-6700 / 8 GB numbers above remain valid until the [HARDWARE_BASELINE.md](HARDWARE_BASELINE.md) day-one suite is re-run on the new board.
+**Host upgrade (`tens`, Nov 2025 — Nov 22 measured):** Primary SSH host **`tens`**: **Ryzen 7 9700X / ~30 GiB**, Gigabyte B850, IOMMU on, KMD 2.11.0. Legacy **`rock`** (i7-6700 / 8 GiB) tables above stay as historical baseline.
+
+| SmolLM2-135M signal | legacy `rock` | **`tens`** |
+|---|---|---|
+| `trace_cost` trace / sync ms | ~102 / ~178 | **22.7 / 32.9** |
+| `m4_replay_probe` mean decode ms | ~282 (pause ~243, **14%**) | **~55 (pause ~45, 19%)** |
+| Subset warm tok/s (functional decode) | ~3.5 | **~18** |
+| Matrix warm tok/s (HF loop) | ~3.55 | **~17.8** (first run **8 s**, compile **9.8 s**) |
+| CPU ref tok/s (same host) | ~15 fp32 | **~38 fp32** |
+
+Pause modes still help on **`tens`** (`m4_pause_compare_2026-11-23T070017Z.json`): SmolLM2 **18.9%**, TinyLlama **9.3%**, Llama-3.2-1B **7.4%**. **NVIDIA CUDA reference:** deferred — same matrix prompt/harness on a CUDA box later (`results/nvidia_ref_*.json`).
 
 **Optional flags on legacy rock (Nov 22):** ``TENSCUDA_THIN_DECODE=1`` — parity gate 8/8, 32/32 tokens; ``TENSCUDA_LOADER_PREFETCH=1`` — TinyLlama load **1.46 s → 1.21 s**; matrix ``--pause-benchmark`` on SmolLM2 **14.3%** pause Δ (243.7 ms).
