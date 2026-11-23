@@ -16,7 +16,7 @@ One command: `bash scripts/run_tt_speed_showcase.sh` — docs in [SHOWCASE_CUDA.
 
 ## TensCUDA compatibility
 
-- **14 models** 135M–8B in [COMPATIBILITY.md](COMPATIBILITY.md); 7B rows (Qwen, Mistral) added with `--compile-bench`.
+- **15 models** 135M–**9B** in [COMPATIBILITY.md](COMPATIBILITY.md); **Gemma-2-9B** largest proved row (**3.81 tok/s**, 32/32).
 - **8B:** 32/32 parity, streaming load on 8 GB host.
 - Unified compat vs speed: [TEST_RESULTS.md](TEST_RESULTS.md).
 
