@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import torch
 
 from . import accurate_ops as _accurate
+from . import native_ops as _native
 from . import cuda_stubs
 from . import migration_log as mig
 
@@ -201,7 +202,17 @@ class _CudaDeviceMode(torch.overrides.TorchFunctionMode):
 
     def __torch_function__(self, func, types, args=(), kwargs=None):
         kwargs = kwargs or {}
-        if _S.exact_softmax and (func in _accurate.SOFTMAX_FUNCS or func in _accurate.SDPA_FUNCS):
+        if os.environ.get("TENSCUDA_NATIVE_OPS"):
+            handled, res = _native.maybe_override(func, args, kwargs)
+            if handled:
+                return res
+        skip_sdpa = os.environ.get("TENSCUDA_NATIVE_OPS", "").strip().lower() in (
+            "1", "all", "true", "yes", "sdpa",
+        ) or "sdpa" in {p.strip() for p in os.environ.get("TENSCUDA_NATIVE_OPS", "").split(",")}
+        if _S.exact_softmax and (
+            func in _accurate.SOFTMAX_FUNCS
+            or (func in _accurate.SDPA_FUNCS and not skip_sdpa)
+        ):
             handled, res = _accurate.maybe_override(func, args, kwargs)
             if handled:
                 return res

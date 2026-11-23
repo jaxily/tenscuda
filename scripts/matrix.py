@@ -1,6 +1,8 @@
 """One command per model: CPU reference + TT run -> results/matrix/<model>.json -> docs/COMPATIBILITY.md.
 
     python scripts/matrix.py MODEL_ID [--new-tokens 32] [--cpu-dtype auto|float32|bfloat16|skip]
+    python scripts/matrix.py MODEL_ID --compile-bench   # explicit compile (default generate uses compile)
+    python scripts/matrix.py MODEL_ID --eager-bench     # TENSCUDA_COMPILE=0 (eager TT-XLA loop)
     python scripts/matrix.py --render          # rebuild docs/COMPATIBILITY.md from results/matrix/
 
 Each step runs in its own process, so host RAM is released between them:
@@ -123,10 +125,48 @@ def measure(a):
     if os.path.exists(tt_json):
         os.remove(tt_json)
     log = os.path.join(MDIR, f"{short}_tt.log")
+    bench_env = {}
+    if a.eager_bench:
+        bench_env["TENSCUDA_COMPILE"] = "0"
+        rec["notes"] = (rec.get("notes") or "") + " eager-bench"
+    elif a.compile_bench:
+        bench_env["TENSCUDA_COMPILE"] = "1"
+        rec["notes"] = (rec.get("notes") or "") + " compile-bench"
+    else:
+        bench_env["TENSCUDA_COMPILE"] = "1"
+        rec["notes"] = (rec.get("notes") or "") + " compile (default)"
     if rec["cpu"]:
-        os.environ["TENSCUDA_TEACHER"] = os.path.join(MDIR, f"{short}_cpu_{cpu_dtype}.json")
-    rc = run([PY, "-u", "scripts/load_bench.py", a.model, "stream", str(a.new_tokens)], log, a.timeout)
-    os.environ.pop("TENSCUDA_TEACHER", None)
+        bench_env["TENSCUDA_TEACHER"] = os.path.join(MDIR, f"{short}_cpu_{cpu_dtype}.json")
+    cmd = [PY, "-u", "scripts/load_bench.py", a.model, "stream", str(a.new_tokens)]
+
+    def _run_tt():
+        import time
+        import subprocess as sp
+
+        with open(log, "w") as fh:
+            p = sp.Popen(
+                cmd,
+                cwd=ROOT,
+                stdout=fh,
+                stderr=sp.STDOUT,
+                env={**os.environ, "PYTHONPATH": ROOT + os.pathsep + os.path.join(ROOT, "scripts"), **bench_env},
+            )
+            t0 = time.time()
+            while p.poll() is None:
+                if time.time() - t0 > a.timeout:
+                    p.kill()
+                    p.wait()
+                    return "timeout"
+                if _mem_available_gib() < 0.6:
+                    p.kill()
+                    p.wait()
+                    return "lowmem"
+                time.sleep(0.5)
+            return p.returncode
+
+    rc = _run_tt()
+    if bench_env.get("TENSCUDA_TEACHER"):
+        del bench_env["TENSCUDA_TEACHER"]
     if rc == 0 and os.path.exists(tt_json):
         rec["tt"] = json.load(open(tt_json))
     else:
@@ -218,7 +258,19 @@ def main():
         action="store_true",
         help="after TT run, subprocess m4_pause_compare for this model (~5 min on P150a)",
     )
+    ap.add_argument(
+        "--compile-bench",
+        action="store_true",
+        help="run load_bench with TENSCUDA_COMPILE=1 (explicit; default is already compile)",
+    )
+    ap.add_argument(
+        "--eager-bench",
+        action="store_true",
+        help="run load_bench with TENSCUDA_COMPILE=0 (slow eager path for A/B)",
+    )
     a = ap.parse_args()
+    if a.eager_bench and a.compile_bench:
+        ap.error("use only one of --eager-bench or --compile-bench")
     if a.model:
         measure(a)
     render(a.tie)

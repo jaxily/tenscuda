@@ -1,0 +1,238 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "n_new": 16,
+  "baseline_tokens": [
+    504,
+    6376,
+    4541,
+    4461,
+    975,
+    260,
+    2591,
+    506,
+    5264,
+    806,
+    42154,
+    8118,
+    281,
+    511,
+    8939,
+    28
+  ],
+  "variants": [
+    {
+      "label": "baseline",
+      "tokens": [
+        504,
+        6376,
+        4541,
+        4461,
+        975,
+        260,
+        2591,
+        506,
+        5264,
+        806,
+        42154,
+        8118,
+        281,
+        511,
+        8939,
+        28
+      ],
+      "mean_decode_ms_all": 262.1,
+      "mean_decode_ms_warm": 52.3,
+      "first_decode_ms": 3198.4,
+      "wall_s": 6.93,
+      "flags": {}
+    },
+    {
+      "label": "cpu_init_only",
+      "tokens": [
+        504,
+        6376,
+        4541,
+        4461,
+        975,
+        260,
+        2591,
+        506,
+        5264,
+        806,
+        42154,
+        8118,
+        281,
+        511,
+        8939,
+        28
+      ],
+      "mean_decode_ms_all": 261.4,
+      "mean_decode_ms_warm": 53.0,
+      "first_decode_ms": 3178.9,
+      "wall_s": 7.29,
+      "flags": {
+        "TENSCUDA_STATIC_CACHE_CPU_INIT": "1"
+      },
+      "parity_vs_baseline": "16/16",
+      "tokens_match": true
+    },
+    {
+      "label": "pause_only",
+      "tokens": [
+        504,
+        6376,
+        4541,
+        4461,
+        975,
+        260,
+        2591,
+        506,
+        5264,
+        806,
+        42154,
+        8118,
+        281,
+        511,
+        8939,
+        28
+      ],
+      "mean_decode_ms_all": 273.4,
+      "mean_decode_ms_warm": 43.2,
+      "first_decode_ms": 3497.2,
+      "wall_s": 7.13,
+      "flags": {
+        "TENSCUDA_DECODE_PAUSE_MODES": "1"
+      },
+      "parity_vs_baseline": "16/16",
+      "tokens_match": true
+    },
+    {
+      "label": "cpu_init_pause",
+      "tokens": [
+        504,
+        6376,
+        4541,
+        4461,
+        975,
+        260,
+        2591,
+        506,
+        5264,
+        806,
+        42154,
+        8118,
+        281,
+        511,
+        8939,
+        28
+      ],
+      "mean_decode_ms_all": 272.6,
+      "mean_decode_ms_warm": 42.9,
+      "first_decode_ms": 3489.5,
+      "wall_s": 7.47,
+      "flags": {
+        "TENSCUDA_STATIC_CACHE_CPU_INIT": "1",
+        "TENSCUDA_DECODE_PAUSE_MODES": "1"
+      },
+      "parity_vs_baseline": "16/16",
+      "tokens_match": true
+    },
+    {
+      "label": "compile_pause",
+      "tokens": [
+        504,
+        6376,
+        314,
+        4461,
+        975,
+        260,
+        2388,
+        506,
+        11005,
+        359,
+        13490,
+        411,
+        1507,
+        6756,
+        281,
+        260
+      ],
+      "mean_decode_ms_all": 650.9,
+      "mean_decode_ms_warm": 25.1,
+      "first_decode_ms": 9411.4,
+      "wall_s": 36.05,
+      "flags": {
+        "TENSCUDA_COMPILE": "1",
+        "TENSCUDA_DECODE_PAUSE_MODES": "1",
+        "TENSCUDA_STATIC_CACHE_CPU_INIT": "1"
+      },
+      "parity_vs_baseline": "2/16",
+      "tokens_match": false
+    },
+    {
+      "label": "compile_pause_legacy",
+      "tokens": [
+        504,
+        6376,
+        314,
+        4461,
+        975,
+        260,
+        2388,
+        506,
+        11005,
+        359,
+        13490,
+        411,
+        1507,
+        6756,
+        281,
+        260
+      ],
+      "mean_decode_ms_all": 1222.2,
+      "mean_decode_ms_warm": 551.4,
+      "first_decode_ms": 10613.5,
+      "wall_s": 44.4,
+      "flags": {
+        "TENSCUDA_COMPILE": "1",
+        "TENSCUDA_COMPILE_LEGACY": "1",
+        "TENSCUDA_DECODE_PAUSE_MODES": "1",
+        "TENSCUDA_STATIC_CACHE_CPU_INIT": "1"
+      },
+      "parity_vs_baseline": "2/16",
+      "tokens_match": false
+    },
+    {
+      "label": "compile_pause_global",
+      "tokens": [
+        504,
+        6376,
+        314,
+        4461,
+        975,
+        260,
+        2388,
+        506,
+        11005,
+        359,
+        13490,
+        411,
+        1507,
+        6756,
+        281,
+        260
+      ],
+      "mean_decode_ms_all": 625.6,
+      "mean_decode_ms_warm": 25.1,
+      "first_decode_ms": 9032.0,
+      "wall_s": 20.17,
+      "flags": {
+        "TENSCUDA_COMPILE": "1",
+        "TENSCUDA_STATIC_CACHE_CPU_INIT": "1",
+        "TENSCUDA_PAUSE_ALL_MODES": "1"
+      },
+      "parity_vs_baseline": "2/16",
+      "tokens_match": false
+    }
+  ]
+}

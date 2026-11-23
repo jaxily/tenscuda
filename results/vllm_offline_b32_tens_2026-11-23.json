@@ -1,0 +1,17 @@
+{
+  "host": "tens",
+  "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+  "mesh_device": "N150",
+  "hf_model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+  "max_seqs_in_batch": 32,
+  "max_tokens": 128,
+  "max_model_len": 8192,
+  "additional_config": {"tt": {"trace_region_size": 67108864}},
+  "prompts": "examples/prompts.json x8 repeat (256 total scheduled)",
+  "wall_s": 36,
+  "aggregate_output_tok_s": 886.2,
+  "peak_engine_generation_tok_s": 925.7,
+  "compare_metal_pytest_b32": 1079,
+  "log": "/tmp/vllm_offline_b32.log",
+  "notes": "vLLM-TT offline; trace_region_size 64MiB required on P150 (default 50MiB TT_FATAL on prefill trace)"
+}

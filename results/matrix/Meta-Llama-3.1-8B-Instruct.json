@@ -8,10 +8,10 @@
   "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
   "dtype": "bfloat16",
   "prompt_tokens": 46,
-  "load_s": 280.2,
-  "decode_tok_per_s": 3.06,
-  "peak_rss_gib": 15.63,
-  "peak_anon_gib": 4.01,
+  "load_s": 0.8,
+  "decode_tok_per_s": 3.05,
+  "peak_rss_gib": 14.86,
+  "peak_anon_gib": 0.54,
   "tokens": [
    791,
    13180,
@@ -89,12 +89,12 @@
   "n_overridden": 0,
   "load_s": 0.5,
   "peak_rss_gib_baseline": 1.66,
-  "peak_rss_gib_after_load": 1.99,
-  "peak_rss_gib_end": 6.72,
-  "peak_anon_rss_gib": 5.82,
-  "peak_file_rss_gib": 1.26,
-  "xla_compiles": 8,
-  "xla_compile_s": 12.1,
+  "peak_rss_gib_after_load": 1.73,
+  "peak_rss_gib_end": 16.17,
+  "peak_anon_rss_gib": 13.56,
+  "peak_file_rss_gib": 2.6,
+  "xla_compiles": 11,
+  "xla_compile_s": 14.1,
   "cpu_fallback_ops": [
    "aten::_local_scalar_dense"
   ],
@@ -108,9 +108,9 @@
   "runs": [
    {
     "run": 0,
-    "total_s": 29.08,
-    "prefill_s": 16.015,
-    "decode_tok_per_s": 2.38,
+    "total_s": 35.57,
+    "prefill_s": 22.258,
+    "decode_tok_per_s": 2.33,
     "tokens": [
      791,
      13180,
@@ -148,9 +148,9 @@
    },
    {
     "run": 1,
-    "total_s": 6.59,
-    "prefill_s": 0.225,
-    "decode_tok_per_s": 4.87,
+    "total_s": 2.92,
+    "prefill_s": 0.115,
+    "decode_tok_per_s": 11.06,
     "tokens": [
      791,
      13180,
@@ -188,9 +188,9 @@
    },
    {
     "run": 2,
-    "total_s": 6.57,
-    "prefill_s": 0.218,
-    "decode_tok_per_s": 4.88,
+    "total_s": 2.9,
+    "prefill_s": 0.101,
+    "decode_tok_per_s": 11.11,
     "tokens": [
      791,
      13180,
@@ -228,9 +228,9 @@
    },
    {
     "run": 3,
-    "total_s": 6.57,
-    "prefill_s": 0.218,
-    "decode_tok_per_s": 4.89,
+    "total_s": 2.9,
+    "prefill_s": 0.1,
+    "decode_tok_per_s": 11.1,
     "tokens": [
      791,
      13180,
@@ -269,5 +269,6 @@
   ],
   "text": "The sky appears blue because of a phenomenon called Rayleigh scattering, where shorter (blue) wavelengths of light are scattered more than longer (red) wavelengths by the"
  },
- "tt_error": null
+ "tt_error": null,
+ "notes": " compile-bench"
 }

@@ -32,15 +32,34 @@ import time
 SCHEMA = "tenscuda-bench/1"
 PROMPT = "Explain in two sentences why the sky is blue."
 SEED = 0
-MODELS = {
-    "smollm2-135m": "HuggingFaceTB/SmolLM2-135M-Instruct",
-    "smollm2-360m": "HuggingFaceTB/SmolLM2-360M-Instruct",
-    "qwen2.5-0.5b": "Qwen/Qwen2.5-0.5B-Instruct",
-    "tinyllama": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    "llama-3.2-1b": "unsloth/Llama-3.2-1B-Instruct",
-    "qwen2.5-1.5b": "Qwen/Qwen2.5-1.5B-Instruct",
-    "smollm2-1.7b": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
-}
+# Prefer scripts/matrix_models.BENCH_MODELS; keep a local copy so ``python -m tenscuda bench``
+# works even when scripts/ is not on PYTHONPATH.
+try:
+    from matrix_models import BENCH_MODELS as MODELS  # type: ignore
+except ImportError:
+    _scripts = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts")
+    if _scripts not in sys.path:
+        sys.path.insert(0, _scripts)
+    try:
+        from matrix_models import BENCH_MODELS as MODELS  # type: ignore
+    except ImportError:
+        MODELS = {
+            "smollm2-135m": "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "smollm2-360m": "HuggingFaceTB/SmolLM2-360M-Instruct",
+            "qwen2.5-0.5b": "Qwen/Qwen2.5-0.5B-Instruct",
+            "tinyllama": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+            "llama-3.2-1b": "unsloth/Llama-3.2-1B-Instruct",
+            "qwen2.5-1.5b": "Qwen/Qwen2.5-1.5B-Instruct",
+            "smollm2-1.7b": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+            "gemma-2-2b": "unsloth/gemma-2-2b-it",
+            "qwen2.5-3b": "Qwen/Qwen2.5-3B-Instruct",
+            "llama-3.2-3b": "unsloth/Llama-3.2-3B-Instruct",
+            "phi-3.5-mini": "microsoft/Phi-3.5-mini-instruct",
+            "qwen2.5-7b": "Qwen/Qwen2.5-7B-Instruct",
+            "mistral-7b": "unsloth/mistral-7b-instruct-v0.3",
+            "llama-3.1-8b": "unsloth/Meta-Llama-3.1-8B-Instruct",
+            "gemma-2-9b": "unsloth/gemma-2-9b-it",
+        }
 # (new tokens, warm runs)
 WORKLOADS = {"full": (32, 3), "quick": (16, 1)}
 NEAR_TIE = 0.25  # CPU top-1/top-2 logit margin treated as a bf16-rounding tie

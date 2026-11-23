@@ -16,6 +16,10 @@ import os
 
 __version__ = "0.0.1"
 
+from .env_flags import ensure_native_ops_env  # noqa: E402
+
+ensure_native_ops_env()
+
 from . import _patch  # noqa: E402
 
 _state = _patch.install(

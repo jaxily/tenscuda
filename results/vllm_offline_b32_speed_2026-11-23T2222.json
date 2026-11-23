@@ -1,0 +1,15 @@
+{
+  "recorded_at": "2026-11-23T22:22:11.318876+00:00",
+  "host": "tens",
+  "path": "vllm-tt-plugin offline_inference_tt",
+  "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+  "max_seqs_in_batch": 32,
+  "max_tokens": 128,
+  "num_prompts": 256,
+  "tqdm_output_tok_s_final": 908.56,
+  "engine_peak_generation_tok_s": 926.9,
+  "vs_cpu_tok_s": 3.05,
+  "vs_cpu_multiple_tqdm": 297.9,
+  "vs_cpu_multiple_peak": 303.9,
+  "log": "/tmp/vllm_offline_b32_speed.log"
+}

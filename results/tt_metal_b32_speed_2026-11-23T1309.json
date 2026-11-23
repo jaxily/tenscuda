@@ -1,0 +1,15 @@
+{
+  "recorded_at": "2026-11-23T21:10:35.158890+00:00",
+  "host": "tens",
+  "path": "tt-metal ttt_compat",
+  "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+  "config": "performance-batch-32",
+  "ttft_ms": 14.31,
+  "avg_ms_per_step": 29.66,
+  "tok_s_per_user": 33.72,
+  "tok_s_throughput": 1079.0,
+  "vs_cpu_tok_s": 3.05,
+  "vs_cpu_multiple": 353.8,
+  "result": "PASSED",
+  "log": "/tmp/tt_metal_b32_speed.log"
+}

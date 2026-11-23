@@ -11,6 +11,14 @@ Neuron-style pattern (transformers-neuronx / NxD inference):
 
 Batching K>1 decode steps without a sync between steps corrupts ``StaticCache``
 (see ``scripts/kv_diagnose.py`` and docs/PERF.md).
+
+M4 compile unlock (overnight 2026-11-23): ``TENSCUDA_COMPILE=1`` uses
+CPU-init StaticCache + torch.compile(backend="tt") with torch-function modes
+exited for capture and run. Measured ~28 ms/step (~36 tok/s) on SmolLM2-135M
+and ~21 ms/step (~47 tok/s) on TinyLlama with full greedy token match vs eager
+baseline (``scripts/m4_compile_diverge.py``). **Default on** since Nov 2026; set
+``TENSCUDA_COMPILE=0`` for the eager path. Optional E4: ``TENSCUDA_NATIVE_OPS=sdpa,rms_norm``
+(opt-in; A/B 32/32, no meaningful ms win on 8B yet).
 """
 from __future__ import annotations
 
@@ -46,13 +54,20 @@ class _ResidentDecodeIO:
 
 
 def _compiled_forward(model):
-    """torch.compile(backend="tt") once per model: dynamo captures the graph, so
-    later steps skip re-tracing the Python model (the lazy-tensor cost)."""
+    """torch.compile(backend="tt") once per model.
+
+    Caller must exit TensCUDA/tt_torch torch-function modes before the first
+    call so Dynamo captures a clean graph (see M4 diverge unlock).
+    """
     fn = getattr(model, "_tenscuda_compiled", None)
     if fn is None:
         from ._patch import real_torch_device
 
-        compiled = torch.compile(model, backend=os.environ.get("TENSCUDA_COMPILE_BACKEND", "tt"), dynamic=False)
+        backend = os.environ.get("TENSCUDA_COMPILE_BACKEND", "tt")
+        options = None
+        if os.environ.get("TENSCUDA_COMPILE_LEGACY", "0") == "1":
+            options = {"tt_legacy_compile": True}
+        compiled = torch.compile(model, backend=backend, dynamic=False, options=options)
 
         def fn(*a, **k):
             with real_torch_device():
@@ -60,6 +75,78 @@ def _compiled_forward(model):
 
         model._tenscuda_compiled = fn
     return fn
+
+
+def _exit_trace_modes() -> list:
+    """Exit TensCUDA + tt_torch torch-function modes; return contexts to re-enter."""
+    import tenscuda._patch as patch
+
+    exited: list = []
+    mode = patch._S.originals.get("mode")
+    if mode is not None:
+        mode.__exit__(None, None, None)
+        exited.append(mode)
+    try:
+        import tt_torch.torch_overrides as overrides
+
+        tt = overrides.torch_function_override
+        if getattr(tt, "_entered", True):
+            tt.__exit__(None, None, None)
+            exited.append(tt)
+    except Exception:
+        pass
+    return exited
+
+
+def _enter_trace_modes(exited: list) -> None:
+    for ctx in reversed(exited):
+        try:
+            ctx.__enter__()
+        except Exception:
+            pass
+
+
+def _make_static_cache(model, max_len, dev, *, cpu_init: bool):
+    from transformers import StaticCache
+
+    if not cpu_init:
+        return StaticCache(config=model.config, max_cache_len=max_len)
+
+    try:
+        cache = StaticCache(
+            config=model.config,
+            max_cache_len=max_len,
+            device="cpu",
+            dtype=torch.bfloat16,
+            max_batch_size=1,
+        )
+    except TypeError:
+        try:
+            cache = StaticCache(
+                config=model.config, max_cache_len=max_len, device="cpu", dtype=torch.bfloat16,
+            )
+        except TypeError:
+            cache = StaticCache(config=model.config, max_cache_len=max_len)
+
+    if hasattr(cache, "early_initialization"):
+        cfg = model.config
+        n_heads = getattr(cfg, "num_key_value_heads", None) or cfg.num_attention_heads
+        head_dim = getattr(cfg, "head_dim", None) or (cfg.hidden_size // cfg.num_attention_heads)
+        cache.early_initialization(
+            batch_size=1, num_heads=n_heads, head_dim=head_dim,
+            dtype=torch.bfloat16, device="cpu",
+        )
+    for layer in cache.layers:
+        if getattr(layer, "keys", None) is not None:
+            layer.keys = layer.keys.to(dev)
+        if getattr(layer, "values", None) is not None:
+            layer.values = layer.values.to(dev)
+        cl = getattr(layer, "cumulative_length", None)
+        if cl is not None and hasattr(cl, "to"):
+            layer.cumulative_length = cl.to(dev)
+        if hasattr(layer, "device"):
+            layer.device = dev
+    return cache
 
 
 def _forward_prefill(fwd, model, input_ids, cache, dev):
@@ -107,33 +194,48 @@ def _forward_decode_step(
     return out.logits
 
 
+def _compile_unlock_generate(model, ids_cpu, max_new_tokens, *, stats=None):
+    """Opt-in ``TENSCUDA_COMPILE=1`` path — see ``tenscuda.compile_unlock``."""
+    from tenscuda.compile_unlock import compile_decode_steps
+
+    steps = compile_decode_steps(model, ids_cpu, max_new_tokens, use_compile=True)
+    tokens = [int(s["token"]) for s in steps]
+    if stats is not None:
+        stats["step_seconds"] = [s["ms"] / 1000.0 for s in steps]
+    dev = next(model.parameters()).device
+    return torch.cat([ids_cpu, torch.tensor([tokens])], dim=1).to(dev)
+
+
 def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=None,
                            attention_mask=None, pad_to=64, stats=None, compile=None):
-    from transformers import StaticCache
+    from tenscuda.decode_graph import get_forward_fn, pause_decode_trace_modes
 
-    dev = next(model.parameters()).device
     ids_cpu = input_ids.detach().to("cpu")
     if ids_cpu.shape[0] != 1:
         raise NotImplementedError("tenscuda static generate: batch size 1 only")
     if attention_mask is not None and not bool((attention_mask.detach().to("cpu") == 1).all()):
         raise NotImplementedError("tenscuda static generate: padded attention_mask not supported")
+
+    if compile is None:
+        from tenscuda.env_flags import compile_enabled
+
+        compile = compile_enabled()
+    if compile:
+        return _compile_unlock_generate(model, ids_cpu, max_new_tokens, stats=stats)
+
+    dev = next(model.parameters()).device
     if v := os.environ.get("TENSCUDA_PAD_TO"):
         pad_to = int(v)
     plen = ids_cpu.shape[1]
     max_len = -(-(plen + max_new_tokens) // pad_to) * pad_to
-    cache = StaticCache(config=model.config, max_cache_len=max_len)
+    cpu_init = os.environ.get("TENSCUDA_STATIC_CACHE_CPU_INIT", "0") == "1"
+    cache = _make_static_cache(model, max_len, dev, cpu_init=cpu_init)
+
     eos = set()
     if eos_token_id is not None:
         eos = set(eos_token_id if isinstance(eos_token_id, (list, tuple)) else [eos_token_id])
 
-    if compile is None:
-        compile = os.environ.get("TENSCUDA_COMPILE", "0") == "1"
-    from tenscuda.decode_graph import get_forward_fn
-
-    if compile:
-        fwd = _compiled_forward(model)
-    else:
-        fwd = get_forward_fn(model)
+    fwd = get_forward_fn(model)
     decode_io = _ResidentDecodeIO(dev) if os.environ.get("TENSCUDA_RESIDENT_DECODE_IO", "0") == "1" else None
     if stats is None and os.environ.get("TENSCUDA_M4_DEBUG", "0") == "1":
         stats = {}
@@ -147,6 +249,7 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
             pass
     model_id = getattr(getattr(model, "config", None), "name_or_path", None) or getattr(model, "name_or_path", None)
     _activity("decoding", model=model_id, new_tokens=max_new_tokens)
+
     with torch.no_grad():
         t = time.time()
         logits = _forward_prefill(fwd, model, ids_cpu, cache, dev)
@@ -154,8 +257,6 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
         timings.append(time.time() - t)
         out.append(nxt)
         cur = plen
-        from tenscuda.decode_graph import pause_decode_trace_modes  # noqa: F811
-
         while len(out) < max_new_tokens and nxt not in eos:
             t = time.time()
             with pause_decode_trace_modes():
@@ -166,7 +267,6 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
             timings.append(time.time() - t)
             out.append(nxt)
             cur += 1
-            # Live rolling tok/s for the monitor chart (decode steps only).
             dec = timings[1:]
             if dec and sum(dec) > 0 and (len(dec) == 1 or len(dec) % 2 == 0):
                 _activity(
@@ -176,6 +276,7 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
                     tokens=len(out),
                     step_ms=round(dec[-1] * 1000, 1),
                 )
+
     if stats is not None:
         stats["step_seconds"] = timings
     dec = timings[1:]

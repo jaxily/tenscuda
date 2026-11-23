@@ -235,6 +235,39 @@ Learnings:
 - **Phi / Gemma compile cost:** first runs are 10–13 minutes (many graphs); warm decode is ~2.3–2.7 tok/s.
 - **8B warm decode measured at 3.01 tok/s** (32 layers), not a projection.
 
+### M4 compile unlock on Llama-3.1-8B (`tens`, Nov 23)
+
+`scripts/m4_compile_generate_ab.py unsloth/Meta-Llama-3.1-8B-Instruct 32`:
+
+| Path | warm ms/step (decode) | ~tok/s | vs baseline |
+|---|---:|---:|---|
+| eager (`TENSCUDA_COMPILE=0`) | 205.7 | ~4.9 | — |
+| compile unlock (`TENSCUDA_COMPILE=1`) | 90.5 | **~11.0** | **32/32** tokens |
+
+Matrix bench: `scripts/matrix.py MODEL --compile-bench` sets `TENSCUDA_COMPILE=1` for the TT
+run. Metal batch-32 on the same card remains **~1079 tok/s** ([TT_METAL_FASTPATH.md](TT_METAL_FASTPATH.md)).
+
+### Bigger-model tok/s coverage (`tens`, Nov 23)
+
+Hypothesis: warm tok/s under compile unlock may not fall monotonically with size (8B compile
+~11 tok/s already beats several 2–4B eager rows). New ladder ids live in
+`scripts/matrix_models.py` (`MATRIX_BIG`, `COMPILE_SCALE`):
+
+| Suite | Models | Command |
+|---|---|---|
+| 7B–9B matrix | Qwen2.5-7B, Mistral-7B, Llama-3.1-8B, Gemma-2-9B | `bash scripts/run_tens_matrix_big.sh` |
+| Compile scale | 135M → 9B (apples-to-apples `--compile-bench`) | `bash scripts/run_tens_compile_scale.sh` |
+
+`python -m tenscuda bench --list` now includes the same 7B–9B keys. Fill rows into
+[COMPATIBILITY.md](COMPATIBILITY.md) after the sweep; 14B+ still waits on M5 bfp.
+
+### vLLM-TT (`tens`, Nov 23)
+
+`~/vllm-tt-plugin` + `docs/install-vllm-tt.sh` in `tt-metal/python_env` (separate from TensCUDA
+`.venv`). Offline batch-32 on `tens`: **~886 aggregate output tok/s** (128 new tokens/req;
+pytest metal demo **~1079**). Needs `HF_MODEL` + `trace_region_size` 64MiB — see
+`docs/TT_METAL_FASTPATH.md` and `results/vllm_offline_b32_tens_2026-11-23.json`.
+
 - **Device memory query: blocked.** Tried and failed: `xm.get_memory_info` (UNIMPLEMENTED),
   `TT_RUNTIME_MEMORY_LOG_LEVEL=program|operation` with `TTMLIR_RUNTIME_LOGGER_LEVEL=DEBUG`
   (no output from the PJRT path), `TT_METAL_MEM_PROFILER=1` (no report), and in-process `ttnn`
@@ -329,6 +362,62 @@ Validated on decode subset (``results/m4_pause_compare_2026-11-22T181456Z.json``
 | CPU ref tok/s (same host) | ~15 fp32 | **~38 fp32** |
 
 Pause modes still help on **`tens`** (`m4_pause_compare_2026-11-23T070017Z.json`): SmolLM2 **18.9%**, TinyLlama **9.3%**, Llama-3.2-1B **7.4%**. **NVIDIA CUDA reference:** deferred — same matrix prompt/harness on a CUDA box later (`results/nvidia_ref_*.json`).
+Speed strategy: [SPEED_RESEARCH.md](SPEED_RESEARCH.md). **Canonical ≥100× CPU write-up: [SPEED.md](SPEED.md).**
+Need ≥100× CPU → native stack, not TensCUDA.
+
+### Speed path reconfirm (`tens`, Nov 23 13:09) — Llama-3.1-8B
+
+CPU reference on same host ≈ **3.05 tok/s**. Metal `ttt_compat` performance-batch-32:
+
+| Metric | Value | vs CPU |
+|---|---:|---:|
+| Aggregate throughput | **1079 tok/s** | **~354×** |
+| Per-user | 33.72 tok/s/u | ~11× |
+| TTFT | 14.31 ms | — |
+
+PASSED in 33.8 s (JIT cache hot). Artifact: `results/tt_metal_b32_speed_2026-11-23T1309.json`.
+Batch-1 metal ~40.5 tok/s/u (~13× CPU). TensCUDA compile matrix ~11–13 tok/s (~4×) — compat only.
+
+**vLLM-TT offline** (`offline_inference_tt`, 256 prompts, max_seqs 32, 128 new tokens, Nov 23 13:12):
+
+| Metric | Value | vs CPU |
+|---|---:|---:|
+| tqdm output tok/s (final) | **~909** | **~298×** |
+| Engine peak generation tok/s | **~927** | **~304×** |
+
+Artifact: `results/vllm_offline_b32_speed_2026-11-23T1312.json`. Metal demo remains the peak aggregate
+(~1079 / ~354×). Details: [TT_METAL_FASTPATH.md](TT_METAL_FASTPATH.md).
+
+### E4 native composites + compile default (`tens`, Nov 23)
+
+`scripts/m4_native_compile_ab.py`: `compile` vs `compile` + `TENSCUDA_NATIVE_OPS=sdpa,rms_norm`.
+
+| Model | Parity | compile warm | compile+native warm | Δ |
+|---|---|---:|---:|---:|
+| SmolLM2-135M | 32/32 | 28.8 ms (~35 tok/s) | 28.7 ms | ~0% |
+| Llama-3.1-8B | 32/32 | 90.0 ms (~11 tok/s) | 90.3 ms | ~0% |
+
+**Decision:** `TENSCUDA_COMPILE` **default 1**; E4 stays **opt-in** (no default `TENSCUDA_NATIVE_DEFAULT`).
+Artifacts: `results/m4_native_compile_ab_*.json`. See [SPEED.md](SPEED.md).
+
+### Test results index (Nov 23)
+
+Regenerate [TEST_RESULTS.md](TEST_RESULTS.md) after new matrix or native runs:
+
+```bash
+python scripts/render_test_results.py
+python scripts/export_vllm_offline_json.py /tmp/vllm_offline_b32_speed.log  # after vLLM offline
+```
+
+### FAST showcase harness (Nov 23)
+
+`scripts/run_tt_speed_showcase.sh` + `scripts/parse_tt_speed_logs.py` bundle **metal batch-32** +
+**vLLM offline** into `results/showcase_*Z.json`. Pitch doc: [SHOWCASE_CUDA.md](SHOWCASE_CUDA.md).
+Optional CUDA same-harness: `scripts/nvidia_vllm_bench_ref.sh` → `results/nvidia_ref_*.json`.
+
+**Reconfirm (`tens`, Nov 23 ~13:43 UTC):** metal batch-32 **1078.88 tok/s** (PASSED);
+vLLM offline rerun hit `EngineDeadError` — showcase JSON merges prior vLLM artifact
+(`results/showcase_2026-11-23T2144Z.json`).
 
 **Optional flags on `tens` (Nov 22):** ``TENSCUDA_THIN_DECODE=1`` — **8/8** kv, **32/32** tokens; ``TENSCUDA_LOADER_PREFETCH=1`` — TinyLlama load **0.66 s → 0.59 s**; full matrix + report in [BENCHMARK_REPORT_tens_2026-11-22.md](BENCHMARK_REPORT_tens_2026-11-22.md).
 

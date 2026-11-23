@@ -71,10 +71,52 @@ This runs a CPU reference when it fits in RAM, then a streaming TT run (one firs
 runs), and appends a row to `docs/COMPATIBILITY.md`. Please review the row, attach the JSON from
 `results/`, and open a PR or use the **Model compatibility report** issue template.
 
+**Bigger models / compile tok/s ladder** (canonical ids in `scripts/matrix_models.py`):
+
+```bash
+# 7B–9B only, with TENSCUDA_COMPILE=1
+bash scripts/run_tens_matrix_big.sh
+
+# Full small→9B compile scale (answers “does tok/s rise with size?”)
+bash scripts/run_tens_compile_scale.sh
+
+# Or one model:
+.venv/bin/python scripts/matrix.py Qwen/Qwen2.5-7B-Instruct --compile-bench --new-tokens 32
+```
+
 Report what actually happened. "Works" means the script runs and its output agrees with the CPU
 reference. If tokens differ, include the matching prefix length and logits/hidden-state error if
 you can, not just "it generated text". Any quantized variant must run in a **fresh process** (the
 TT-XLA graph cache may reuse the first weight dtype).
+
+## Speed (≥100× CPU)
+
+TensCUDA matrix tok/s is **compat**, not the speed claim. On one P150, native metal / vLLM-TT
+delivers **~300–350× CPU** aggregate on Llama-8B.
+
+| Doc | Use |
+|---|---|
+| [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) | **Single index** — compat matrix vs native speed, links to `results/*.json` |
+| [docs/SPEED.md](docs/SPEED.md) | Measured numbers, reproduce commands |
+| [docs/SHOWCASE_CUDA.md](docs/SHOWCASE_CUDA.md) | Pitch / Tenstorrent vs CUDA |
+| [docs/TT_METAL_FASTPATH.md](docs/TT_METAL_FASTPATH.md) | Build metal + vLLM env on card host |
+
+On the card host:
+
+```bash
+bash scripts/run_tt_speed_showcase.sh          # metal batch-32 + vLLM (run vLLM alone if EngineDeadError)
+python scripts/export_vllm_offline_json.py /tmp/vllm_offline_b32_speed.log
+python scripts/render_test_results.py         # refresh TEST_RESULTS.md after new JSON
+```
+
+Do not mix TensCUDA `.venv` with `~/tt-metal/python_env`; **one job on the card**.
+
+### Committing speed artifacts
+
+When you land a native or showcase run, commit the JSON under `results/` (e.g. `showcase_*.json`,
+`vllm_offline_b32_speed_*.json`, `tt_metal_b32_speed_*.json`), run `render_test_results.py`,
+and include `docs/TEST_RESULTS.md` in the same PR so Anthony (or any reader) sees compat **and**
+speed in one place.
 
 ## Benchmark results
 
@@ -114,11 +156,11 @@ private file paths from logs before posting them.
 | **M1** Tier-1 matrix | Done | — |
 | **M2** 3–4B (Llama-3.2-3B, Qwen2.5-3B, Phi-3.5-mini, Gemma-2-2B) | Done | Phi: greedy near-tie (teacher 31/32); document only |
 | **M3** 8B small host | Done | 32/32 vs mmap'd CPU bf16 on 8 GB host; TT anon **0.52 GiB** |
-| **M4** Graph replay + native kernels | In progress | **3/3** subset ~13% decode step win with opt-in `TENSCUDA_DECODE_PAUSE_MODES=1` (8/8 kv, 32/32 tokens); run `scripts/m4_pause_compare.py` — see `docs/DAY_REPORT_2026-11-22.md` |
+| **M4** Graph replay + native kernels | In progress | **`TENSCUDA_COMPILE` default on** (~11 tok/s 8B, 32/32). E4 `sdpa,rms_norm` opt-in (parity OK, no 8B ms win). **Native showcase:** metal **~1079 tok/s** b32, vLLM **~909 tok/s** — see TEST_RESULTS. |
 | **M5–M7** Quant / encoders / multi-chip | Not started | Device memory stats blocked in PJRT |
 
-Details and targets: [docs/VISION.md](docs/VISION.md). Latest measurements: [docs/PERF.md](docs/PERF.md),
-[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+Details and targets: [docs/VISION.md](docs/VISION.md). M4 speed learnings: [docs/M4_LEARNINGS.md](docs/M4_LEARNINGS.md).
+Latest measurements: [docs/PERF.md](docs/PERF.md), [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Good first areas
 

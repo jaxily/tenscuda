@@ -38,6 +38,18 @@ UMD notes (non-fatal): `Setting power state failed: Remote I/O error`; eth FW 1.
 
 Artifacts: `results/tens_host/m4_*`, `results/tens_host/tens_m4_suite.log` (synced from `tens`).
 
+### Speed path (native metal / vLLM) — measured Nov 23 13:09–13:12
+
+CPU Llama-8B ≈ **3.05 tok/s**. Same card, not TensCUDA:
+
+| Path | Aggregate | vs CPU |
+|------|----------:|-------:|
+| tt-metal `ttt_compat` batch-32 | **1079 tok/s** | **~354×** |
+| vLLM-TT offline (max_seqs 32) | **~909 tok/s** | **~298×** |
+
+Canonical doc: [SPEED.md](SPEED.md). JSON: `results/tt_metal_b32_speed_2026-11-23T1309.json`,
+`results/vllm_offline_b32_speed_2026-11-23T1312.json`.
+
 Compare against **legacy rock** (i7-6700 / 8 GB): trace ~102 / sync ~178 ms, replay ~282 / ~243 ms, warm ~3.5 tok/s — **host upgrade dominates decode wall time on SmolLM2.**
 
 ### Optional flags (`tens`, 2026-11-22)

@@ -4,18 +4,25 @@
 Requires a P150a. Example:
 
   python scripts/measure_decode_subset.py
+  python scripts/measure_decode_subset.py --scale   # COMPILE_SCALE ladder (incl. 7B–9B)
+  TENSCUDA_COMPILE=1 python scripts/measure_decode_subset.py --scale
 
-Appends JSON under results/measure_decode_*.json for SmolLM2-135M, TinyLlama, Llama-3.2-1B.
+Appends JSON under results/measure_decode_*.json.
 Merge numbers into docs/PERF.md and re-run matrix.py for COMPATIBILITY.md.
 """
 from __future__ import annotations
 
+import argparse
 import json
+import os
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from matrix_models import COMPILE_SCALE  # noqa: E402
 
 MODELS = [
     "HuggingFaceTB/SmolLM2-135M-Instruct",
@@ -68,13 +75,39 @@ def bench_one(model_id: str, n_new: int = 32) -> dict:
 def main() -> None:
     import tenscuda
 
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument(
+        "--scale",
+        action="store_true",
+        help="run COMPILE_SCALE ladder (135M → 9B) instead of the small subset",
+    )
+    ap.add_argument(
+        "--compile",
+        action="store_true",
+        help="set TENSCUDA_COMPILE=1 for the run (M4 unlock)",
+    )
+    a = ap.parse_args()
+    if a.compile:
+        os.environ["TENSCUDA_COMPILE"] = "1"
+
     if not tenscuda.is_active:
         raise SystemExit("tenscuda: no TT device (run on P150a)")
 
+    models = list(COMPILE_SCALE) if a.scale else MODELS
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
-    out = ROOT / "results" / f"measure_decode_subset_{stamp}.json"
-    rows = [bench_one(mid) for mid in MODELS]
-    payload = {"recorded_at": stamp, "models": rows}
+    tag = "scale" if a.scale else "subset"
+    out = ROOT / "results" / f"measure_decode_{tag}_{stamp}.json"
+    rows = []
+    for mid in models:
+        try:
+            rows.append(bench_one(mid))
+        except Exception as e:
+            rows.append({"model": mid, "error": f"{type(e).__name__}: {e}"})
+    payload = {
+        "recorded_at": stamp,
+        "compile": os.environ.get("TENSCUDA_COMPILE") == "1",
+        "models": rows,
+    }
     out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(payload, indent=2))
     print(f"wrote {out}")

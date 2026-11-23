@@ -33,6 +33,33 @@ TensCUDA is a small Python package. When you `import tenscuda`, PyTorch's CUDA d
 factory kwargs, `torch.cuda.synchronize()`, ...) is redirected to the Tenstorrent device exposed by
 [TT-XLA](https://github.com/tenstorrent/tt-xla). It does **not** translate CUDA kernels.
 
+## Speed showcase (same P150)
+
+For **FAST** — why Tenstorrent beats CPU by **~100×+** on concurrent Llama-8B — run the
+**native** stack, not TensCUDA:
+
+```bash
+# On the card host (after TT_METAL_FASTPATH setup)
+cd ~/tenscuda && bash scripts/run_tt_speed_showcase.sh
+```
+
+| Path | Llama-3.1-8B | vs CPU (~3 tok/s) |
+|---|---:|---:|
+| **tt-metal batch-32** | **~1079 tok/s** aggregate | **~354×** |
+| **vLLM-TT offline** (b32) | **~909 tok/s** | **~300×** |
+
+**Pitch + CUDA comparison:** **[docs/SHOWCASE_CUDA.md](docs/SHOWCASE_CUDA.md)**.  
+Numbers and cmds: [docs/SPEED.md](docs/SPEED.md). Setup: [docs/TT_METAL_FASTPATH.md](docs/TT_METAL_FASTPATH.md).
+
+### Compat (this repo package)
+
+TensCUDA is the HF **`.cuda()` onramp** (~11–13 tok/s on Llama-8B compile, ~4× CPU) — not the speed path.
+
+**Full matrix + speed comparison:** [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) (compat vs native stacks,
+committed `results/*.json`). Model-by-model parity: [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+
+**Reviewer cheat sheet:** [docs/WHATS_NEW.md](docs/WHATS_NEW.md).
+
 ## Quickstart
 
 ```bash
@@ -130,9 +157,9 @@ Other checks (all in `tests/`, 18 passing on the P150a):
 - Ops without an XLA lowering run on the CPU. For example, `torch.unique` and `torch.nonzero` run as
   `aten::_unique2` and `aten::nonzero` fallbacks.
 
-**Compatibility matrix (Nov 2026):** 12 models from 135M through **Llama-3.1-8B** (M2 phi3/gemma2
-complete; 8B loads on a 8 GB host with **0.55 GiB** peak anon RSS, ~3.0 tok/s warm decode).
-See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+**Compatibility matrix (Nov 2026):** 12+ models through **Llama-3.1-8B** (and 7B class) —
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md). Speed claim (metal/vLLM ≥100× CPU):
+[docs/SPEED.md](docs/SPEED.md).
 
 ## How it works
 
@@ -188,6 +215,8 @@ are experimental — run `scripts/m4_pause_parity_gate.py` after changes. Shape 
 [docs/COMPILE_AND_SHAPES.md](docs/COMPILE_AND_SHAPES.md). Host records: [docs/HARDWARE_BASELINE.md](docs/HARDWARE_BASELINE.md).
 
 Matrix rows can record pause delta: `python scripts/matrix.py MODEL --pause-benchmark`.
+Decode uses **compile unlock by default**; use `TENSCUDA_COMPILE=0` or `matrix.py --eager-bench` for the slow path.
+Optional E4: `TENSCUDA_NATIVE_OPS=sdpa,rms_norm` (see [docs/SPEED.md](docs/SPEED.md)).
 
 ## Card monitor (Ubuntu)
 
@@ -233,7 +262,9 @@ generated from those files by `python scripts/build_leaderboard.py`.
 
 ## Honest limits
 
-- **Slower than the CPU on tiny models.** Decoding is host-bound: torch-xla re-traces the
+- **Need GPU-class / ≥100× CPU throughput?** Use native tt-metal / vLLM-TT
+  ([docs/SPEED.md](docs/SPEED.md)) — not the TensCUDA matrix loop (~4× CPU on 8B).
+- **Slower than the CPU on tiny models (TensCUDA path).** Decoding is host-bound: torch-xla re-traces the
   Python model every token (about 0.25 s per step on a 2015-era 4-core CPU), while the card
   itself is busy for only about 6% of the step. Small models are therefore slower than running
   them on the CPU. Llama-3.1-8B still decodes at about **3.0 tok/s** warm on this host (see matrix).

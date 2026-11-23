@@ -1,0 +1,30 @@
+{
+  "recorded_at": "2026-11-23T21:51:56.900902+00:00",
+  "host": "tens",
+  "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+  "cpu_reference_tok_s": 3.05,
+  "runs": [
+    {
+      "path": "metal_b32",
+      "avg_ms_per_step": 29.64,
+      "tok_s_per_user": 33.74,
+      "tok_s_throughput": 1079.67,
+      "result": "PASSED",
+      "vs_cpu_tok_s": 3.05,
+      "vs_cpu_multiple": 354.0
+    },
+    {
+      "path": "vllm_offline",
+      "source": "json",
+      "tqdm_output_tok_s_final": 909.34,
+      "engine_peak_generation_tok_s": 927.2,
+      "vs_cpu_tok_s": 3.05,
+      "vs_cpu_multiple": 304.0
+    }
+  ],
+  "logs": {
+    "metal_b32": "/tmp/tt_metal_b32_speed.log",
+    "vllm_offline": "/home/jake/tenscuda/results/vllm_offline_b32_speed_2026-11-23T1312.json"
+  },
+  "headline_aggregate_tok_s": 1079.67
+}
