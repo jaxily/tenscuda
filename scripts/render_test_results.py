@@ -68,7 +68,16 @@ def main() -> None:
     if vllm_runs:
         vllm_name = vllm_runs[-1].name
     vllm = _load(vllm_name) or {}
-    showcase = _load("showcase_2026-11-23T2151Z.json") or {}
+    serve_runs = sorted((REPO / "results").glob("vllm_serve_b32_speed_*.json"))
+    serve_name = serve_runs[-1].name if serve_runs else ""
+    serve = _load(serve_name) if serve_name else {}
+    showcase_runs = sorted((REPO / "results").glob("showcase_*.json"))
+    showcase_name = (
+        "showcase_2026-11-23T2151Z.json"
+        if (REPO / "results" / "showcase_2026-11-23T2151Z.json").is_file()
+        else (showcase_runs[-1].name if showcase_runs else "")
+    )
+    showcase = _load(showcase_name) if showcase_name else {}
 
     llama_tt = next((r for r in matrix if "Llama-3.1-8B" in r["model"]), None)
     llama_tt_warm = float(llama_tt["tt_tok_s"]) if llama_tt else 11.09
@@ -144,6 +153,12 @@ def main() -> None:
             f"peak **{vllm.get('engine_peak_generation_tok_s', '—')}** tok/s | "
             f"[`results/{vllm_name}`](../results/{vllm_name}) |"
         )
+    if serve:
+        lines.append(
+            f"| vLLM-TT **serve** (`bench serve`) | 32 prompts, OpenAI backend | "
+            f"**{serve.get('output_token_throughput_tok_s', '—')}** tok/s | "
+            f"[`results/{serve_name}`](../results/{serve_name}) |"
+        )
     listed = {"tt_metal_b32_speed_2026-11-23T1309.json", vllm_name}
     for name, desc in ARTIFACTS:
         if name in listed:
@@ -156,9 +171,9 @@ def main() -> None:
     lines.extend(
         [
             "",
-            "Reproduce: [SPEED.md](SPEED.md), [SHOWCASE_CUDA.md](SHOWCASE_CUDA.md),",
-            "`bash scripts/run_tt_speed_showcase.sh` (run **vLLM offline alone** after metal if",
-            "`EngineDeadError`).",
+            "Reproduce: [CUDA_TO_METAL.md](CUDA_TO_METAL.md), [SPEED.md](SPEED.md),",
+            "`bash scripts/run_fast_aggregate_measure.sh` or",
+            "`run_tt_speed_showcase.sh --skip-metal` after metal if `EngineDeadError`.",
             "",
             "## TensCUDA compatibility matrix (warm tok/s vs CPU)",
             "",
@@ -238,6 +253,8 @@ def main() -> None:
         }:
             continue
         lines.append(f"| `{p.name}` | vLLM offline (additional run) |")
+    for p in sorted((REPO / "results").glob("vllm_serve_b32_speed_*.json")):
+        lines.append(f"| `{p.name}` | vLLM serve bench |")
 
     OUT.write_text("\n".join(lines) + "\n")
     print(OUT)

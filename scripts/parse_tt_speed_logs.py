@@ -36,7 +36,11 @@ VLLM_OFF_PEAK_ALT = re.compile(
 )
 
 VLLM_SERVE_TPS = re.compile(
-    r"(?:Output\s+token\s+throughput|throughput).*?(?P<tps>[\d.]+)\s*tok/s",
+    r"Output\s+token\s+throughput\s*\(tok/s\)\s*:?\s*(?P<tps>[\d.]+)",
+    re.I,
+)
+VLLM_SERVE_PEAK = re.compile(
+    r"Peak\s+output\s+token\s+throughput\s*\(tok/s\)\s*:?\s*(?P<tps>[\d.]+)",
     re.I,
 )
 VLLM_SERVE_REQ = re.compile(
@@ -109,6 +113,9 @@ def parse_vllm_serve(log_text: str) -> dict[str, Any]:
     m = VLLM_SERVE_TPS.search(log_text)
     if m:
         out["output_token_throughput_tok_s"] = float(m.group("tps"))
+    peak = VLLM_SERVE_PEAK.search(log_text)
+    if peak:
+        out["peak_output_token_throughput_tok_s"] = float(peak.group("tps"))
     r = VLLM_SERVE_REQ.search(log_text)
     if r:
         out["request_throughput_req_s"] = float(r.group("rps"))

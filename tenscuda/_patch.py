@@ -372,6 +372,16 @@ def _patch_hf_generate():
             kw.get("num_beams", getattr(gc, "num_beams", 1) or 1) == 1
         unsupported = set(kw) - _STATIC_OK_KW
         if greedy and input_ids is not None and input_ids.shape[0] == 1 and not unsupported:
+            from .fast_router import decide_route, maybe_block_compat_generate, model_id_from_config
+
+            mid = model_id_from_config(getattr(self, "config", None))
+            decision = decide_route(
+                model_id=mid,
+                batch_size=int(input_ids.shape[0]),
+                greedy=True,
+            )
+            maybe_block_compat_generate(decision)
+
             from .generate import static_greedy_generate
 
             mnt = kw.get("max_new_tokens") or getattr(gc, "max_new_tokens", None) or 20

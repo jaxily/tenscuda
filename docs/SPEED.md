@@ -68,7 +68,15 @@ python examples/offline_inference_tt.py --model "$HF_MODEL" \
   --additional-config '{"tt": {"trace_region_size": 67108864}}'
 ```
 
-Serve + `vllm bench serve`: [scripts/vllm_bench_llama8b_tens.sh](../scripts/vllm_bench_llama8b_tens.sh).
+Serve + `vllm bench serve`:
+
+```bash
+bash scripts/run_tt_serve_fast.sh --bench
+# or scripts/vllm_bench_llama8b_tens.sh after card hygiene
+```
+
+Aggregate measure + JSON: `bash scripts/run_fast_aggregate_measure.sh`.  
+Boundary (why not TensCUDA): [CUDA_TO_METAL.md](CUDA_TO_METAL.md).
 
 ## Reconfirm session (Nov 23 afternoon)
 

@@ -7,6 +7,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/lib/card_hygiene.sh
+source "$REPO_ROOT/scripts/lib/card_hygiene.sh"
 MODEL="${HF_MODEL:-unsloth/Meta-Llama-3.1-8B-Instruct}"
 MESH="${MESH_DEVICE:-N150}"
 RUN_SERVE=0
@@ -44,12 +46,7 @@ OFFLINE_LOG="${SHOWCASE_OFFLINE_LOG:-/tmp/vllm_offline_b32_speed.log}"
 SERVE_LOG="${VLLM_BENCH_LOG:-/tmp/vllm_bench_8b.log}"
 
 echo "=== Card hygiene (stop TensCUDA / duplicate pytest) ==="
-pkill -f 'scripts/matrix.py' 2>/dev/null || true
-pkill -f 'run_tens_' 2>/dev/null || true
-sleep 1
-if pgrep -af 'pjrt-plugin|tenscuda.*matrix' >/dev/null 2>&1; then
-  echo "WARN: TensCUDA/matrix may still be running — check with: pgrep -af matrix" >&2
-fi
+card_hygiene || true
 
 TT_METAL="${TT_METAL_HOME:-$HOME/tt-metal}"
 if [[ ! -d "$TT_METAL" ]]; then

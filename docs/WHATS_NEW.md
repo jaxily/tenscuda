@@ -12,13 +12,15 @@ On **one P150** (`tens`), **Llama-3.1-8B**:
 | vLLM-TT offline (32 seq) | **~909 tok/s** | **~300×** |
 | TensCUDA compile (batch 1) | **~11 tok/s** | **~4×** |
 
-One command: `bash scripts/run_tt_speed_showcase.sh` — docs in [SHOWCASE_CUDA.md](SHOWCASE_CUDA.md).
+Aggregate serving: `bash scripts/run_fast_aggregate_measure.sh` or `run_tt_serve_fast.sh --bench` —  
+[SHOWCASE_CUDA.md](SHOWCASE_CUDA.md), [CUDA_TO_METAL.md](CUDA_TO_METAL.md).
 
 ## TensCUDA compatibility
 
 - **15 models** 135M–**9B** in [COMPATIBILITY.md](COMPATIBILITY.md); **Gemma-2-9B** largest proved row (**3.81 tok/s**, 32/32).
 - **8B:** 32/32 parity, streaming load on 8 GB host.
 - Unified compat vs speed: [TEST_RESULTS.md](TEST_RESULTS.md).
+- **All matrix models scored** (compat grade + fast-path): [MODEL_SCORES.md](MODEL_SCORES.md), `results/model_scores.json`.
 
 ## Code / defaults
 

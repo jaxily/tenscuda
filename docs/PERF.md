@@ -413,6 +413,10 @@ python scripts/export_vllm_offline_json.py /tmp/vllm_offline_b32_speed.log  # af
 
 `scripts/run_tt_speed_showcase.sh` + `scripts/parse_tt_speed_logs.py` bundle **metal batch-32** +
 **vLLM offline** into `results/showcase_*Z.json`. Pitch doc: [SHOWCASE_CUDA.md](SHOWCASE_CUDA.md).
+
+**CUDA → OSS metal (Nov 23):** [CUDA_TO_METAL.md](CUDA_TO_METAL.md). One-card aggregate measure:
+`bash scripts/run_fast_aggregate_measure.sh` → showcase + `vllm_*_b32_speed_*.json` + `render_test_results`.
+Serve only: `run_tt_serve_fast.sh --bench`; shared hygiene in `scripts/lib/card_hygiene.sh`.
 Optional CUDA same-harness: `scripts/nvidia_vllm_bench_ref.sh` → `results/nvidia_ref_*.json`.
 
 **Reconfirm (`tens`, Nov 23 ~13:43 UTC):** metal batch-32 **1078.88 tok/s** (PASSED);

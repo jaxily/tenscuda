@@ -1,0 +1,326 @@
+{
+  "generated_at": "2026-11-24T05:02:00.820623+00:00",
+  "host_note": "Compat scores from matrix on tens P150; native from vLLM/metal artifacts",
+  "scoring": {
+    "compat_score_100": "parity up to 50 + speed vs CPU up to 30 + status up to 20",
+    "grade_S": "fast-eligible + 32/32 parity + measured native vLLM",
+    "modes": "compat=TT-XLA TensCUDA; native=vLLM-TT or tt-metal (separate venv)"
+  },
+  "models": [
+    {
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "params": "7.62B",
+      "arch": "qwen2",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU bfloat16",
+      "compat_tok_s": 12.9,
+      "cpu_tok_s": 3.35,
+      "compat_vs_cpu_x": 3.85,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 98.9,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+      "params": "8.03B",
+      "arch": "llama",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU bfloat16",
+      "compat_tok_s": 11.09,
+      "cpu_tok_s": 3.05,
+      "compat_vs_cpu_x": 3.64,
+      "fast_eligible": true,
+      "native_vllm_aggregate_tok_s": 909.94,
+      "native_metal_b32_tok_s": 1079.0,
+      "recommended_stack": "native (vLLM-TT / tt-metal)",
+      "score_compat_100": 97.3,
+      "grade": "S",
+      "modes": {
+        "compat": true,
+        "native": true,
+        "tenscuda_fast_enforce_blocks_compat": true
+      }
+    },
+    {
+      "model": "unsloth/Llama-3.2-3B-Instruct",
+      "params": "3.21B",
+      "arch": "llama",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU float32",
+      "compat_tok_s": 8.89,
+      "cpu_tok_s": 2.91,
+      "compat_vs_cpu_x": 3.05,
+      "fast_eligible": true,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "native for speed; compat for parity",
+      "score_compat_100": 92.9,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": true,
+        "tenscuda_fast_enforce_blocks_compat": true
+      }
+    },
+    {
+      "model": "Qwen/Qwen2.5-3B-Instruct",
+      "params": "3.09B",
+      "arch": "qwen2",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU float32",
+      "compat_tok_s": 8.29,
+      "cpu_tok_s": 3.15,
+      "compat_vs_cpu_x": 2.63,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 89.7,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+      "params": "1.71B",
+      "arch": "llama",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU float32",
+      "compat_tok_s": 14.35,
+      "cpu_tok_s": 5.63,
+      "compat_vs_cpu_x": 2.55,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 89.1,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "params": "1.54B",
+      "arch": "qwen2",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU float32",
+      "compat_tok_s": 13.17,
+      "cpu_tok_s": 5.27,
+      "compat_vs_cpu_x": 2.5,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 88.7,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "unsloth/Llama-3.2-1B-Instruct",
+      "params": "1.24B",
+      "arch": "llama",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU float32",
+      "compat_tok_s": 19.27,
+      "cpu_tok_s": 7.91,
+      "compat_vs_cpu_x": 2.44,
+      "fast_eligible": true,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "native for speed; compat for parity",
+      "score_compat_100": 88.3,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": true,
+        "tenscuda_fast_enforce_blocks_compat": true
+      }
+    },
+    {
+      "model": "unsloth/gemma-2-2b-it",
+      "params": "2.61B",
+      "arch": "gemma2",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU float32",
+      "compat_tok_s": 7.94,
+      "cpu_tok_s": 3.39,
+      "compat_vs_cpu_x": 2.34,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 87.6,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "params": "1.10B",
+      "arch": "llama",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU float32",
+      "compat_tok_s": 17.95,
+      "cpu_tok_s": 8.92,
+      "compat_vs_cpu_x": 2.01,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 85.1,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "unsloth/gemma-2-9b-it",
+      "params": "9.24B",
+      "arch": "gemma2",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU bfloat16",
+      "compat_tok_s": 3.81,
+      "cpu_tok_s": 2.35,
+      "compat_vs_cpu_x": 1.62,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 82.2,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "params": "362M",
+      "arch": "llama",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU float32",
+      "compat_tok_s": 16.6,
+      "cpu_tok_s": 18.59,
+      "compat_vs_cpu_x": 0.89,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 76.7,
+      "grade": "A",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "params": "135M",
+      "arch": "llama",
+      "status": "works",
+      "parity_summary": "32/32 vs CPU float32",
+      "compat_tok_s": 18.05,
+      "cpu_tok_s": 38.12,
+      "compat_vs_cpu_x": 0.47,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 73.6,
+      "grade": "B",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "params": "494M",
+      "arch": "qwen2",
+      "status": "works (near-tie)",
+      "parity_summary": "16/32 vs CPU float32",
+      "compat_tok_s": 20.2,
+      "cpu_tok_s": 13.87,
+      "compat_vs_cpu_x": 1.46,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 50.9,
+      "grade": "C",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "unsloth/mistral-7b-instruct-v0.3",
+      "params": "7.25B",
+      "arch": "mistral",
+      "status": "works (near-tie)",
+      "parity_summary": "4/32 vs CPU bfloat16",
+      "compat_tok_s": 12.92,
+      "cpu_tok_s": 3.28,
+      "compat_vs_cpu_x": 3.94,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 50.8,
+      "grade": "C",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    },
+    {
+      "model": "microsoft/Phi-3.5-mini-instruct",
+      "params": "3.82B",
+      "arch": "phi3",
+      "status": "works (near-tie)",
+      "parity_summary": "6/32 vs CPU float32",
+      "compat_tok_s": 6.89,
+      "cpu_tok_s": 2.54,
+      "compat_vs_cpu_x": 2.71,
+      "fast_eligible": false,
+      "native_vllm_aggregate_tok_s": null,
+      "native_metal_b32_tok_s": null,
+      "recommended_stack": "compat",
+      "score_compat_100": 44.7,
+      "grade": "C",
+      "modes": {
+        "compat": true,
+        "native": false,
+        "tenscuda_fast_enforce_blocks_compat": false
+      }
+    }
+  ]
+}

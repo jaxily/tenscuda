@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-11-24T03:57:37.361057+00:00",
+  "host": "tens",
+  "path": "vllm-tt-plugin bench serve",
+  "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+  "max_num_seqs": 32,
+  "num_prompts": 32,
+  "output_token_throughput_tok_s": 137.27,
+  "request_throughput_req_s": null,
+  "vs_cpu_tok_s": 3.05,
+  "vs_cpu_multiple": 45.0,
+  "log": "/tmp/vllm_bench_8b.log"
+}

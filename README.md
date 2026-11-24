@@ -49,6 +49,7 @@ cd ~/tenscuda && bash scripts/run_tt_speed_showcase.sh
 | **vLLM-TT offline** (b32) | **~909 tok/s** | **~300×** |
 
 **Pitch + CUDA comparison:** **[docs/SHOWCASE_CUDA.md](docs/SHOWCASE_CUDA.md)**.  
+**CUDA → open-source metal (aggregate serving):** **[docs/CUDA_TO_METAL.md](docs/CUDA_TO_METAL.md)**.  
 Numbers and cmds: [docs/SPEED.md](docs/SPEED.md). Setup: [docs/TT_METAL_FASTPATH.md](docs/TT_METAL_FASTPATH.md).
 
 ### Compat (this repo package)
@@ -57,6 +58,7 @@ TensCUDA is the HF **`.cuda()` onramp** (~11–13 tok/s on Llama-8B compile, ~4�
 
 **Full matrix + speed comparison:** [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) (compat vs native stacks,
 committed `results/*.json`). Model-by-model parity: [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+**Grades + stack choice:** [docs/MODEL_SCORES.md](docs/MODEL_SCORES.md) (`results/model_scores.json`).
 
 **Reviewer cheat sheet:** [docs/WHATS_NEW.md](docs/WHATS_NEW.md).
 

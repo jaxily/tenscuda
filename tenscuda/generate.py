@@ -209,8 +209,15 @@ def _compile_unlock_generate(model, ids_cpu, max_new_tokens, *, stats=None):
 def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=None,
                            attention_mask=None, pad_to=64, stats=None, compile=None):
     from tenscuda.decode_graph import get_forward_fn, pause_decode_trace_modes
+    from tenscuda.fast_router import decide_route, maybe_block_compat_generate, model_id_from_config
 
     ids_cpu = input_ids.detach().to("cpu")
+    decision = decide_route(
+        model_id=model_id_from_config(getattr(model, "config", None)),
+        batch_size=int(ids_cpu.shape[0]),
+        greedy=True,
+    )
+    maybe_block_compat_generate(decision)
     if ids_cpu.shape[0] != 1:
         raise NotImplementedError("tenscuda static generate: batch size 1 only")
     if attention_mask is not None and not bool((attention_mask.detach().to("cpu") == 1).all()):

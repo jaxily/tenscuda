@@ -19,9 +19,12 @@ Prereq: [TT_METAL_FASTPATH.md](TT_METAL_FASTPATH.md) (built `~/tt-metal`, `~/vll
 ```bash
 cd ~/tenscuda
 export HF_MODEL=unsloth/Meta-Llama-3.1-8B-Instruct
-bash scripts/run_tt_speed_showcase.sh
-# Optional longer path: bash scripts/run_tt_speed_showcase.sh --serve
+bash scripts/run_fast_aggregate_measure.sh   # metal + offline + serve bench → results/
+# Lighter: bash scripts/run_tt_speed_showcase.sh
+# OpenAI serve: bash scripts/run_tt_serve_fast.sh --bench
 ```
+
+Full CUDA → OSS metal narrative: [CUDA_TO_METAL.md](CUDA_TO_METAL.md).
 
 Output: `/tmp/tt_metal_b32_speed.log`, `/tmp/vllm_offline_b32_speed.log`, and  
 `results/showcase_<timestamp>Z.json`.

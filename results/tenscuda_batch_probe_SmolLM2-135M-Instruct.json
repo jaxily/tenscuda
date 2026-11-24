@@ -1,0 +1,22 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "tokens": 32,
+  "runs": [
+    {
+      "batch_size": 1,
+      "decode_tokens_total": 32,
+      "decode_seconds": 98.01868152618408,
+      "aggregate_tok_s": 0.33,
+      "per_user_tok_s": 0.33,
+      "ms_per_step": 3161.89
+    },
+    {
+      "batch_size": 4,
+      "decode_tokens_total": 128,
+      "decode_seconds": 98.7021176815033,
+      "aggregate_tok_s": 1.3,
+      "per_user_tok_s": 0.32,
+      "ms_per_step": 3183.94
+    }
+  ]
+}

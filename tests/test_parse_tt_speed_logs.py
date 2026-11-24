@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from parse_tt_speed_logs import merge_showcase, parse_metal_b32, parse_vllm_offline, parse_vllm_serve
@@ -24,9 +25,37 @@ def test_parse_vllm_offline():
 
 
 def test_parse_vllm_serve():
-    log = "Output token throughput: 1234.5 tok/s"
+    log = (
+        "Output token throughput (tok/s):         137.27\n"
+        "Peak output token throughput (tok/s):    160.00\n"
+    )
     row = parse_vllm_serve(log)
-    assert row["output_token_throughput_tok_s"] == 1234.5
+    assert row["output_token_throughput_tok_s"] == 137.27
+    assert row["peak_output_token_throughput_tok_s"] == 160.0
+
+
+def test_export_vllm_serve_json(tmp_path: Path, monkeypatch):
+    import export_vllm_serve_json as exporter
+
+    log = tmp_path / "bench.log"
+    log.write_text(
+        "Output token throughput (tok/s):         876.0\n"
+        "Request throughput (req/s):              12.3\n"
+    )
+    out = tmp_path / "out.json"
+    monkeypatch.setattr(exporter, "REPO", tmp_path)
+    monkeypatch.setattr(
+        exporter.sys,
+        "argv",
+        ["export_vllm_serve_json.py", str(log), "test-model"],
+    )
+    # Patch results dir via REPO
+    (tmp_path / "results").mkdir()
+    exporter.main()
+    written = list((tmp_path / "results").glob("vllm_serve_b32_speed_*.json"))
+    assert len(written) == 1
+    doc = json.loads(written[0].read_text())
+    assert doc["output_token_throughput_tok_s"] == 876.0
 
 
 def test_merge_showcase(tmp_path: Path):

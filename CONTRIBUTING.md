@@ -104,10 +104,16 @@ delivers **~300–350× CPU** aggregate on Llama-8B.
 On the card host:
 
 ```bash
-bash scripts/run_tt_speed_showcase.sh          # metal batch-32 + vLLM (run vLLM alone if EngineDeadError)
+bash scripts/run_fast_aggregate_measure.sh     # metal + offline + serve → results/ + TEST_RESULTS
+bash scripts/run_tt_serve_fast.sh --bench    # vLLM OpenAI serve only
+bash scripts/run_tt_speed_showcase.sh        # metal + offline (skip-metal if EngineDeadError)
 python scripts/export_vllm_offline_json.py /tmp/vllm_offline_b32_speed.log
-python scripts/render_test_results.py         # refresh TEST_RESULTS.md after new JSON
+python scripts/export_vllm_serve_json.py /tmp/vllm_bench_8b.log
+python scripts/render_test_results.py
+python scripts/render_model_scores.py          # MODEL_SCORES.md + model_scores.json
 ```
+
+See [docs/CUDA_TO_METAL.md](docs/CUDA_TO_METAL.md) for the compat vs OSS metal boundary.
 
 Do not mix TensCUDA `.venv` with `~/tt-metal/python_env`; **one job on the card**.
 

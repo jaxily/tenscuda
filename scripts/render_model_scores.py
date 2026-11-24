@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""Generate docs/MODEL_SCORES.md and results/model_scores.json from matrix + fast path data."""
+from __future__ import annotations
+
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from tenscuda.fast_router import is_fast_eligible  # noqa: E402
+
+COMPAT = ROOT / "docs" / "COMPATIBILITY.md"
+OUT_MD = ROOT / "docs" / "MODEL_SCORES.md"
+OUT_JSON = ROOT / "results" / "model_scores.json"
+
+# Measured on tens P150 (Nov 2026); keyed by exact HF id.
+NATIVE_MEASURED: dict[str, dict[str, float | None]] = {
+    "unsloth/Meta-Llama-3.1-8B-Instruct": {
+        "vllm_offline_aggregate_tok_s": 909.94,
+        "metal_b32_aggregate_tok_s": 1079.0,
+    },
+}
+
+
+def _matrix_rows(md: str) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    in_table = False
+    for line in md.splitlines():
+        if line.startswith("| model |"):
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if not line.startswith("|") or line.startswith("|---"):
+            if rows:
+                break
+            continue
+        parts = [c.strip() for c in line.strip("|").split("|")]
+        if len(parts) < 10:
+            continue
+        rows.append(
+            {
+                "model": parts[0],
+                "params": parts[1],
+                "arch": parts[2],
+                "status": parts[3],
+                "parity": parts[4],
+                "tt_tok_s": parts[5].split()[0],
+                "cpu_tok_s": parts[8].split()[0],
+            }
+        )
+    return rows
+
+
+def _parity_fraction(parity: str) -> float | None:
+    m = re.search(r"(\d+)/32", parity)
+    if m:
+        return int(m.group(1)) / 32.0
+    return None
+
+
+def _score_row(row: dict[str, str]) -> dict:
+    model = row["model"]
+    status = row["status"]
+    parity = row["parity"]
+    try:
+        tt = float(row["tt_tok_s"])
+        cpu = float(row["cpu_tok_s"])
+    except ValueError:
+        tt = cpu = 0.0
+
+    pf = _parity_fraction(parity)
+    parity_pts = (pf or (0.47 if "near" in status else 0.3)) * 50
+    if "teacher-forced top-1 32/32" in parity or "32/32" in parity.split(";")[0]:
+        parity_pts = min(50.0, parity_pts + (5.0 if pf and pf >= 1.0 else 0))
+
+    speed_pts = min(tt / max(cpu, 0.01) / 4.0, 1.0) * 30 if cpu > 0 else 0
+    status_pts = 20 if status == "works" else 15 if "near" in status else 5
+
+    total = round(parity_pts + speed_pts + status_pts, 1)
+    fast_eligible = is_fast_eligible(model)
+    native = NATIVE_MEASURED.get(model, {})
+
+    if fast_eligible and pf == 1.0 and native.get("vllm_offline_aggregate_tok_s"):
+        letter = "S"
+        recommended = "native (vLLM-TT / tt-metal)"
+    elif total >= 75:
+        letter = "A"
+        recommended = "compat" if not fast_eligible else "native for speed; compat for parity"
+    elif total >= 55:
+        letter = "B"
+        recommended = "compat"
+    elif total >= 40:
+        letter = "C"
+        recommended = "compat"
+    else:
+        letter = "D"
+        recommended = "compat (expect slow)"
+
+    tt_cpu = round(tt / cpu, 2) if cpu > 0 else None
+
+    return {
+        "model": model,
+        "params": row["params"],
+        "arch": row["arch"],
+        "status": status,
+        "parity_summary": parity.split(";")[0].strip(),
+        "compat_tok_s": tt,
+        "cpu_tok_s": cpu,
+        "compat_vs_cpu_x": tt_cpu,
+        "fast_eligible": fast_eligible,
+        "native_vllm_aggregate_tok_s": native.get("vllm_offline_aggregate_tok_s"),
+        "native_metal_b32_tok_s": native.get("metal_b32_aggregate_tok_s"),
+        "recommended_stack": recommended,
+        "score_compat_100": total,
+        "grade": letter,
+        "modes": {
+            "compat": True,
+            "native": fast_eligible,
+            "tenscuda_fast_enforce_blocks_compat": fast_eligible,
+        },
+    }
+
+
+def main() -> None:
+    md = COMPAT.read_text() if COMPAT.is_file() else ""
+    scored = [_score_row(r) for r in _matrix_rows(md)]
+    scored.sort(key=lambda r: (-r["score_compat_100"], r["model"]))
+
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    doc = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "host_note": "Compat scores from matrix on tens P150; native from vLLM/metal artifacts",
+        "scoring": {
+            "compat_score_100": "parity up to 50 + speed vs CPU up to 30 + status up to 20",
+            "grade_S": "fast-eligible + 32/32 parity + measured native vLLM",
+            "modes": "compat=TT-XLA TensCUDA; native=vLLM-TT or tt-metal (separate venv)",
+        },
+        "models": scored,
+    }
+    OUT_JSON.write_text(json.dumps(doc, indent=2) + "\n")
+
+    lines = [
+        "# Model scores — compat vs native (`tens`, P150)",
+        "",
+        f"*Generated by `scripts/render_model_scores.py` — {ts}*",
+        "",
+        "Scores rate **TensCUDA compat** (parity + batch-1 tok/s vs CPU). **Native**",
+        "(vLLM-TT / tt-metal) is separate; only allowlisted models have a fast path.",
+        "",
+        "Regenerate after matrix or speed artifacts change:",
+        "",
+        "```bash",
+        "python scripts/matrix.py --render          # COMPATIBILITY.md",
+        "python scripts/render_model_scores.py",
+        "```",
+        "",
+        "## Scoring",
+        "",
+        "| Component | Max pts |",
+        "|---|---:|",
+        "| Token parity (greedy vs CPU) | 50 |",
+        "| Compat speed (TT/CPU, saturates at 4×) | 30 |",
+        "| Status (`works` / near-tie) | 20 |",
+        "",
+        "**Grades:** **S** = use **native** for throughput (fast allowlist + 32/32 + measured vLLM).",
+        "**A–D** = compat quality only.",
+        "",
+        "## Stack modes (on `tens`)",
+        "",
+        "| Mode | Stack | When |",
+        "|---|---|---|",
+        "| **compat** | TensCUDA + TT-XLA | Any matrix model; arbitrary HF scripts |",
+        "| **native** | vLLM-TT / tt-metal | Allowlisted Llama-class; ~900–1100 tok/s aggregate |",
+        "| **`TENSCUDA_FAST`** | policy on compat | `off` / `advisory` / `enforce` — see [CUDA_TO_METAL.md](CUDA_TO_METAL.md) |",
+        "",
+        "## All models",
+        "",
+        "| Grade | Model | Compat tok/s | vs CPU | Fast path | Native agg tok/s | Recommended |",
+        "|---|---|---:|---:|---|---|---|",
+    ]
+
+    for r in scored:
+        nat = r["native_vllm_aggregate_tok_s"]
+        nat_s = f"**{nat:.0f}**" if nat else ("eligible*" if r["fast_eligible"] else "—")
+        short = r["model"].split("/")[-1]
+        lines.append(
+            f"| **{r['grade']}** ({r['score_compat_100']:.0f}) | {short} | "
+            f"{r['compat_tok_s']:.2f} | {r['compat_vs_cpu_x']:.2f}× | "
+            f"{'yes' if r['fast_eligible'] else 'no'} | {nat_s} | {r['recommended_stack']} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "\\* Fast-eligible by pattern but native throughput not measured on this card yet.",
+            "",
+            "Machine-readable: [`results/model_scores.json`](../results/model_scores.json).",
+            "Matrix detail: [COMPATIBILITY.md](COMPATIBILITY.md).",
+            "Split test: [CUDA_TO_METAL.md](CUDA_TO_METAL.md).",
+        ]
+    )
+    OUT_MD.write_text("\n".join(lines) + "\n")
+    print(OUT_MD)
+    print(OUT_JSON)
+
+
+if __name__ == "__main__":
+    main()
