@@ -3,6 +3,7 @@ import os
 import pytest
 
 from tenscuda.fast_router import (
+    RouteDecision,
     decide_route,
     fast_mode,
     is_fast_eligible,
@@ -48,11 +49,10 @@ def test_decision_matrix():
 
 
 def test_enforce_blocks():
-    d = decide_route(
-        model_id="unsloth/Meta-Llama-3.1-8B-Instruct",
-        batch_size=1,
-        greedy=True,
-        fast_mode_value="enforce",
+    d = RouteDecision(
+        "fast",
+        "unsloth/Meta-Llama-3.1-8B-Instruct",
+        "TENSCUDA_FAST=enforce",
     )
     os.environ["TENSCUDA_FAST"] = "enforce"
     try:
@@ -62,9 +62,28 @@ def test_enforce_blocks():
         del os.environ["TENSCUDA_FAST"]
 
 
+def test_enforce_routes_delegate_not_xla():
+    d = decide_route(
+        model_id="unsloth/Meta-Llama-3.1-8B-Instruct",
+        batch_size=1,
+        greedy=True,
+        fast_mode_value="enforce",
+    )
+    assert d.route == "delegate"
+
+
 def test_fast_mode_values():
     os.environ["TENSCUDA_FAST"] = "advisory"
     try:
         assert fast_mode() == "advisory"
     finally:
         del os.environ["TENSCUDA_FAST"]
+
+
+def test_fast_mode_delegate_aliases():
+    for raw, want in (("delegate", "delegate"), ("vllm", "delegate"), ("native", "delegate")):
+        os.environ["TENSCUDA_FAST"] = raw
+        try:
+            assert fast_mode() == want
+        finally:
+            del os.environ["TENSCUDA_FAST"]

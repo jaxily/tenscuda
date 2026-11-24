@@ -86,17 +86,38 @@ Metal pytest and vLLM offline both touch the same device. If offline or serve fa
 | `torch.cuda` + HF generate | TensCUDA (compat only for arbitrary models) |
 | Peak tok/s on one GPU | **vLLM-TT or metal batch-32** on one P150 |
 
-Do **not** expect `import tenscuda` + `model.generate()` to reach vLLM-class aggregate throughput;
-that is by design ([SPEED_RESEARCH.md](SPEED_RESEARCH.md)).
+With **`TENSCUDA_FAST=delegate`** (aliases: `vllm`, `native`) and **vLLM-TT serve** listening on
+`127.0.0.1:8000`, allowlisted **`model.generate()`** skips TT-XLA decode and calls the OpenAI
+**`/v1/completions`** API — full vLLM speed for that request (typically **serve** throughput,
+not offline b32 aggregate unless the server is tuned that way).
+
+```bash
+# Terminal A (metal venv — once)
+bash scripts/run_tt_serve_fast.sh
+
+# Terminal B (TensCUDA venv — your HF script)
+export TENSCUDA_FAST=delegate
+export TENSCUDA_VLLM_BASE_URL=http://127.0.0.1:8000/v1
+python -m tenscuda your_script.py
+```
+
+`TENSCUDA_FAST=auto` tries delegate, then falls back to TT-XLA if vLLM is down.
+`enforce` also uses **delegate** (no TT-XLA) and **raises** if vLLM is unreachable.
+
+`load_causal_lm(...)` in delegate modes returns a **stub** (config only, no safetensors → card).
+Scripts that use `from_pretrained().cuda()` still load on TT-XLA unless they switch to
+`load_causal_lm` or we add a broader hook later.
 
 ## Fast vs compat split (tested)
 
-| `TENSCUDA_FAST` | Allowlisted model | `generate()` on TT-XLA |
-|-----------------|-------------------|-------------------------|
-| `off` (default) | yes | compat (no warning) |
-| `advisory` | yes | compat + **warn** to use vLLM |
-| `enforce` | yes | **raises** — use vLLM/metal |
-| any | not on list | compat (matrix models) |
+| `TENSCUDA_FAST` | Allowlisted model | `generate()` |
+|-----------------|-------------------|----------------|
+| `off` (default) | yes | TT-XLA compat (no warning) |
+| `advisory` | yes | TT-XLA + **warn** |
+| `delegate` / `vllm` | yes | **vLLM HTTP** (skip XLA decode) if serve up |
+| `auto` | yes | vLLM if up, else TT-XLA |
+| `enforce` | yes | **vLLM only** — error if not up |
+| any | not on list | TT-XLA (matrix models) |
 
 Allowlist: `tenscuda/fast_router.py` (`FAST_MODEL_IDS` + Llama 3.1/3.2 patterns).
 

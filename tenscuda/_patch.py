@@ -365,23 +365,26 @@ def _patch_hf_generate():
             on_tt = _is_xla(next(self.parameters()).device)
         except StopIteration:
             on_tt = False
-        if not on_tt or args or os.environ.get("TENSCUDA_HF_GENERATE") == "1":
-            return orig(self, input_ids, *args, **kw)
         gc = kw.get("generation_config") or self.generation_config
         greedy = not kw.get("do_sample", getattr(gc, "do_sample", False)) and \
             kw.get("num_beams", getattr(gc, "num_beams", 1) or 1) == 1
-        unsupported = set(kw) - _STATIC_OK_KW
-        if greedy and input_ids is not None and input_ids.shape[0] == 1 and not unsupported:
-            from .fast_router import decide_route, maybe_block_compat_generate, model_id_from_config
+        from .fast_router import decide_route, model_id_from_config
 
-            mid = model_id_from_config(getattr(self, "config", None))
-            decision = decide_route(
+        mid = model_id_from_config(getattr(self, "config", None))
+        delegate = (
+            greedy
+            and input_ids is not None
+            and decide_route(
                 model_id=mid,
                 batch_size=int(input_ids.shape[0]),
                 greedy=True,
-            )
-            maybe_block_compat_generate(decision)
-
+            ).route
+            == "delegate"
+        )
+        if (not on_tt and not delegate) or args or os.environ.get("TENSCUDA_HF_GENERATE") == "1":
+            return orig(self, input_ids, *args, **kw)
+        unsupported = set(kw) - _STATIC_OK_KW
+        if greedy and input_ids is not None and input_ids.shape[0] == 1 and not unsupported:
             from .generate import static_greedy_generate
 
             mnt = kw.get("max_new_tokens") or getattr(gc, "max_new_tokens", None) or 20

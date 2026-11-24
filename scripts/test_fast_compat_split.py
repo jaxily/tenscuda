@@ -43,6 +43,7 @@ is_fast_eligible = _fr.is_fast_eligible
 COMBOS = [
     ("unsloth/Meta-Llama-3.1-8B-Instruct", 1, True, "advisory"),
     ("unsloth/Meta-Llama-3.1-8B-Instruct", 1, True, "enforce"),
+    ("unsloth/Meta-Llama-3.1-8B-Instruct", 1, True, "delegate"),
     ("unsloth/Meta-Llama-3.1-8B-Instruct", 1, True, "off"),
     ("unsloth/Meta-Llama-3.1-8B-Instruct", 32, True, "advisory"),
     ("HuggingFaceTB/SmolLM2-135M-Instruct", 1, True, "advisory"),
@@ -147,8 +148,8 @@ def main() -> None:
         "decision_matrix": decisions,
         "measured": measured,
         "notes": (
-            "route=fast means use vLLM-TT/metal for throughput; "
-            "generate() still uses compat unless TENSCUDA_FAST=enforce blocks."
+            "route=delegate when TENSCUDA_FAST=delegate|enforce|auto|vllm; "
+            "generate() uses vLLM OpenAI API and skips TT-XLA decode when serve is up."
         ),
     }
     out = ROOT / "results" / f"fast_compat_split_{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H%M')}Z.json"
@@ -159,7 +160,8 @@ def main() -> None:
 
     if args.from_artifacts or not args.bench:
         assert decisions[0]["route"] == "fast"
-        assert decisions[4]["route"] == "compat"
+        assert decisions[1]["route"] == "delegate"
+        assert decisions[5]["route"] == "compat"
 
 
 if __name__ == "__main__":

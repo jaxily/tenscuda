@@ -9,7 +9,7 @@ from typing import Literal
 
 log = logging.getLogger("tenscuda.fast_router")
 
-Route = Literal["fast", "compat"]
+Route = Literal["fast", "compat", "delegate"]
 
 # HuggingFace ids known good on vLLM-TT offline b32 on P150 (expand from plugin README).
 FAST_MODEL_IDS: frozenset[str] = frozenset(
@@ -27,14 +27,24 @@ FAST_MODEL_PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 
-def fast_mode() -> str:
-    """``off`` | ``advisory`` (default when set) | ``enforce``."""
-    v = os.environ.get("TENSCUDA_FAST", "off").strip().lower()
+def _normalize_fast_mode(raw: str) -> str:
+    v = raw.strip().lower()
     if v in {"", "0", "false", "no", "off"}:
         return "off"
-    if v in {"enforce", "require", "vllm"}:
+    if v in {"enforce", "require"}:
         return "enforce"
+    if v in {"delegate", "vllm", "native"}:
+        return "delegate"
+    if v == "auto":
+        return "auto"
+    if v == "advisory":
+        return "advisory"
     return "advisory"
+
+
+def fast_mode() -> str:
+    """``off`` | ``advisory`` | ``enforce`` | ``delegate`` | ``auto`` | ``vllm`` (alias)."""
+    return _normalize_fast_mode(os.environ.get("TENSCUDA_FAST", "off"))
 
 
 def model_id_from_config(config) -> str | None:
@@ -45,6 +55,14 @@ def model_id_from_config(config) -> str | None:
         if val:
             return str(val)
     return None
+
+
+def skip_xla_weights_load(model_id: str | None) -> bool:
+    """True when ``load_causal_lm`` should not stream weights to the card (vLLM owns weights)."""
+    if not model_id:
+        return False
+    d = decide_route(model_id=model_id.strip(), batch_size=1, greedy=True)
+    return d.route == "delegate"
 
 
 def is_fast_eligible(model_id: str | None) -> bool:
@@ -64,7 +82,7 @@ class RouteDecision:
 
     @property
     def use_fast(self) -> bool:
-        return self.route == "fast"
+        return self.route in {"fast", "delegate"}
 
 
 def decide_route(
@@ -74,7 +92,7 @@ def decide_route(
     greedy: bool = True,
     fast_mode_value: str | None = None,
 ) -> RouteDecision:
-    mode = fast_mode_value if fast_mode_value is not None else fast_mode()
+    mode = _normalize_fast_mode(fast_mode_value) if fast_mode_value is not None else fast_mode()
     eligible = is_fast_eligible(model_id)
 
     if not eligible:
@@ -89,8 +107,10 @@ def decide_route(
         )
     if not greedy:
         return RouteDecision("compat", model_id, "sampling requires compat/HF path today")
-    if mode in {"advisory", "enforce"}:
-        return RouteDecision("fast", model_id, f"TENSCUDA_FAST={mode}")
+    if mode in {"delegate", "auto", "enforce"}:
+        return RouteDecision("delegate", model_id, f"TENSCUDA_FAST={mode} -> vLLM-TT")
+    if mode == "advisory":
+        return RouteDecision("fast", model_id, "TENSCUDA_FAST=advisory")
     return RouteDecision("compat", model_id, "default compat")
 
 
@@ -106,7 +126,7 @@ def maybe_block_compat_generate(decision: RouteDecision) -> None:
         return
     raise RuntimeError(
         f"TENSCUDA_FAST=enforce: refuse TT-XLA generate for fast-eligible model {decision.model_id!r}. "
-        "Run vLLM-TT offline/serve (metal venv) — docs/CUDA_TO_METAL.md."
+        "Set TENSCUDA_FAST=delegate and run vLLM-TT serve — docs/CUDA_TO_METAL.md."
     )
 
 

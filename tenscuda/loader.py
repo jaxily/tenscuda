@@ -82,11 +82,50 @@ def _rebuild_nonpersistent_buffers(model, config, device):
     return fixed
 
 
+def load_causal_lm_delegate_stub(model_id: str, dtype=torch.bfloat16, verbose=True):
+    """Config + anchor only — for ``TENSCUDA_FAST=delegate``; vLLM serves weights."""
+    from tenscuda.fast_router import skip_xla_weights_load
+
+    if not skip_xla_weights_load(model_id):
+        raise RuntimeError("load_causal_lm_delegate_stub: model not in delegate mode")
+
+    from transformers import AutoConfig, AutoModelForCausalLM, GenerationConfig
+
+    path = _resolve(model_id)
+    config = AutoConfig.from_pretrained(path)
+    t0 = time.time()
+    with torch.device("meta"):
+        model = AutoModelForCausalLM.from_config(config, dtype=dtype)
+    model.eval()
+    model.register_parameter(
+        "_tenscuda_delegate_anchor",
+        torch.nn.Parameter(torch.zeros(1, dtype=dtype), requires_grad=False),
+    )
+    try:
+        config.name_or_path = model_id
+        model.config.name_or_path = model_id
+        model.name_or_path = model_id
+        model.generation_config = GenerationConfig.from_pretrained(path)
+    except Exception:
+        pass
+    if verbose:
+        print(
+            f"tenscuda loader: delegate stub for {model_id} (no TT-XLA weights) "
+            f"in {time.time()-t0:.1f}s — vLLM must be serving this model",
+            flush=True,
+        )
+    return model
+
+
 def load_causal_lm(model_id: str, dtype=torch.bfloat16, device=None, verbose=True):
     from safetensors import safe_open
     from transformers import AutoConfig, AutoModelForCausalLM
 
     import tenscuda
+    from tenscuda.fast_router import skip_xla_weights_load
+
+    if skip_xla_weights_load(model_id):
+        return load_causal_lm_delegate_stub(model_id, dtype=dtype, verbose=verbose)
 
     device = device or tenscuda.device
     path = _resolve(model_id)

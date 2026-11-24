@@ -29,7 +29,7 @@ python scripts/render_model_scores.py
 |---|---|---|
 | **compat** | TensCUDA + TT-XLA | Any matrix model; arbitrary HF scripts |
 | **native** | vLLM-TT / tt-metal | Allowlisted Llama-class; ~900–1100 tok/s aggregate |
-| **`TENSCUDA_FAST`** | policy on compat | `off` / `advisory` / `enforce` — see [CUDA_TO_METAL.md](CUDA_TO_METAL.md) |
+| **`TENSCUDA_FAST`** | route `generate()` | `off` / `advisory` / **`delegate`** (`vllm`) / `auto` / `enforce` — [CUDA_TO_METAL.md](CUDA_TO_METAL.md) |
 
 ## All models
 

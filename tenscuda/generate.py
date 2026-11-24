@@ -22,10 +22,13 @@ baseline (``scripts/m4_compile_diverge.py``). **Default on** since Nov 2026; set
 """
 from __future__ import annotations
 
+import logging
 import os
 import time
 
 import torch
+
+log = logging.getLogger("tenscuda.generate")
 
 
 def _sync(dev=None):
@@ -206,10 +209,9 @@ def _compile_unlock_generate(model, ids_cpu, max_new_tokens, *, stats=None):
     return torch.cat([ids_cpu, torch.tensor([tokens])], dim=1).to(dev)
 
 
-def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=None,
-                           attention_mask=None, pad_to=64, stats=None, compile=None):
-    from tenscuda.decode_graph import get_forward_fn, pause_decode_trace_modes
-    from tenscuda.fast_router import decide_route, maybe_block_compat_generate, model_id_from_config
+def _try_vllm_delegate(model, input_ids, max_new_tokens, eos_token_id):
+    from tenscuda.fast_router import decide_route, fast_mode, maybe_block_compat_generate, model_id_from_config
+    from tenscuda.vllm_delegate import VllmDelegateError, delegate_error_hint, delegate_greedy_generate
 
     ids_cpu = input_ids.detach().to("cpu")
     decision = decide_route(
@@ -217,7 +219,33 @@ def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=Non
         batch_size=int(ids_cpu.shape[0]),
         greedy=True,
     )
+    if decision.route == "delegate":
+        try:
+            return delegate_greedy_generate(
+                model,
+                input_ids,
+                max_new_tokens=max_new_tokens,
+                eos_token_id=eos_token_id,
+                decision=decision,
+            )
+        except VllmDelegateError as exc:
+            if fast_mode() == "auto":
+                log.warning("tenscuda: vLLM delegate failed (%s); falling back to TT-XLA", exc)
+            else:
+                raise RuntimeError(delegate_error_hint(exc)) from exc
     maybe_block_compat_generate(decision)
+    return None
+
+
+def static_greedy_generate(model, input_ids, max_new_tokens=32, eos_token_id=None,
+                           attention_mask=None, pad_to=64, stats=None, compile=None):
+    from tenscuda.decode_graph import get_forward_fn, pause_decode_trace_modes
+
+    delegated = _try_vllm_delegate(model, input_ids, max_new_tokens, eos_token_id)
+    if delegated is not None:
+        return delegated
+
+    ids_cpu = input_ids.detach().to("cpu")
     if ids_cpu.shape[0] != 1:
         raise NotImplementedError("tenscuda static generate: batch size 1 only")
     if attention_mask is not None and not bool((attention_mask.detach().to("cpu") == 1).all()):
