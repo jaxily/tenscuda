@@ -14,5 +14,8 @@ sudo apt install ./dist/tenscuda-monitor_0.1.0_all.deb
 ```
 
 Then open **TensCUDA Monitor** from Activities, or run `tenscuda-monitor`.
+Terminal UI (SSH-friendly): `tenscuda-monitor --tty`.
 
-Tok/s / model activity requires TensCUDA on the same machine (activity JSONL under `~/.cache/tenscuda/`). Card temp/power/clock work from sysfs alone.
+Tok/s / model activity requires TensCUDA on the same machine (activity JSONL under `~/.cache/tenscuda/`).
+MiniMax video jobs are polled from `MINIMAX_URL` (default `http://127.0.0.1:20000`).
+Card temp/power/clock work from sysfs alone.

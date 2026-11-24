@@ -90,17 +90,44 @@ def format_workload(row: dict[str, Any] | None) -> str:
     if not row:
         return "Idle"
     phase = str(row.get("phase") or "running")
-    parts = [phase.capitalize()]
+    parts = [phase.replace("_", " ").capitalize()]
     short = short_model_name(row.get("model"))
     if short:
         parts.append(short)
     if row.get("params"):
         parts.append(str(row["params"]))
+    if row.get("kind") == "video" or row.get("progress") is not None:
+        try:
+            pct = float(row["progress"]) * 100.0
+            parts.append(f"{pct:.0f}%")
+        except (TypeError, ValueError, KeyError):
+            pass
+        step = row.get("step")
+        total = row.get("total_steps")
+        if step is not None and total is not None:
+            parts.append(f"step {step}/{total}")
+        elif step is not None:
+            parts.append(f"step {step}")
+        if row.get("mode"):
+            parts.append(str(row["mode"]))
     if row.get("tok_s") is not None:
         parts.append(f"{row['tok_s']} tok/s")
     if row.get("load_gib") is not None:
         parts.append(f"{row['load_gib']} GiB loaded")
     return "  ·  ".join(parts)
+
+
+def latest_workload(max_age_s: float = 120.0) -> dict[str, Any] | None:
+    """Prefer a live MiniMax video job; else recent TensCUDA activity JSONL."""
+    try:
+        from monitor.minimax import fetch_live
+
+        live = fetch_live()
+    except Exception:
+        live = None
+    if live:
+        return live
+    return latest(max_age_s=max_age_s)
 
 
 def latest_tok_s(max_age_s: float = 15.0) -> float | None:
@@ -117,6 +144,8 @@ def latest_decode(max_age_s: float = 15.0) -> dict[str, Any] | None:
     phase = str(row.get("phase") or "")
     if phase in ("idle", "loading"):
         return None
+    if row.get("kind") == "video":
+        return None
     tok_s = row.get("tok_s")
     if tok_s is None:
         return None
@@ -126,6 +155,49 @@ def latest_decode(max_age_s: float = 15.0) -> dict[str, Any] | None:
         return None
     return {
         "tok_s": rate,
+        "model": short_model_name(row.get("model")),
+        "params": row.get("params"),
+    }
+
+
+def latest_chart(max_age_s: float = 120.0) -> dict[str, Any] | None:
+    """Chart payload for the top series: video progress % or LLM tok/s."""
+    row = latest_workload(max_age_s=max_age_s)
+    if not row:
+        return None
+    if row.get("kind") == "video" or (
+        row.get("progress") is not None and row.get("tok_s") is None
+    ):
+        try:
+            progress = float(row.get("progress") or 0.0)
+        except (TypeError, ValueError):
+            progress = 0.0
+        return {
+            "mode": "video",
+            "value": max(0.0, min(100.0, progress * 100.0)),
+            "unit": "%",
+            "title": "Gen progress",
+            "model": short_model_name(row.get("model")),
+            "step": row.get("step"),
+            "total_steps": row.get("total_steps"),
+            "video_mode": row.get("mode"),
+            "phase": row.get("phase"),
+        }
+    phase = str(row.get("phase") or "")
+    if phase in ("idle", "loading"):
+        return None
+    tok_s = row.get("tok_s")
+    if tok_s is None:
+        return None
+    try:
+        rate = float(tok_s)
+    except (TypeError, ValueError):
+        return None
+    return {
+        "mode": "decode",
+        "value": rate,
+        "unit": "tok/s",
+        "title": "Decode speed",
         "model": short_model_name(row.get("model")),
         "params": row.get("params"),
     }

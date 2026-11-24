@@ -11,7 +11,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
-from monitor.activity import format_workload, latest, latest_decode
+from monitor.activity import format_workload, latest_chart, latest_workload
 from monitor.charts import AreaChart
 from monitor.sysfs import snapshot
 
@@ -102,21 +102,40 @@ class MonitorWindow(Adw.ApplicationWindow):
             bits.append(f"Host RAM {snap.get('ram_used_gib') or '—'} / {snap['ram_total_gib']} GiB")
         self._meta.set_label("  ·  ".join(b for b in bits if b))
 
-        self._work.set_label(format_workload(latest()))
+        self._work.set_label(format_workload(latest_workload()))
 
-        decode = latest_decode()
-        # Idle → 0 so the chart drops like System Monitor network; live → rate + model.
-        if decode is None:
+        chart = latest_chart()
+        # Idle → 0 so the chart drops like System Monitor network; live → rate / progress.
+        if chart is None:
+            self._tok.set_title("Decode speed")
+            self._tok.y_min_fixed = 0
             self._tok.push(0.0)
             self._tok.set_value_text("—")
+        elif chart["mode"] == "video":
+            self._tok.set_title("Gen progress")
+            self._tok.y_min_fixed = 0
+            self._tok.y_max_fixed = 100.0
+            pct = float(chart["value"])
+            self._tok.push(pct)
+            label = f"{pct:.0f}%"
+            if chart.get("step") is not None and chart.get("total_steps") is not None:
+                label = f"{label}  ·  step {chart['step']}/{chart['total_steps']}"
+            if chart.get("model"):
+                label = f"{label}  ·  {chart['model']}"
+            self._tok.set_value_text(label)
         else:
-            tok_s = decode["tok_s"]
+            self._tok.set_title("Decode speed")
+            self._tok.y_min_fixed = 0
+            tok_s = float(chart["value"])
+            # Leave headroom when switching back from a 0–100% video series.
+            if self._tok.y_max_fixed is not None and self._tok.y_max_fixed >= 99:
+                self._tok.y_max_fixed = max(tok_s * 1.25, 10.0)
             self._tok.push(tok_s)
             label = f"{tok_s:.1f} tok/s"
-            if decode.get("model"):
-                label = f"{label}  ·  {decode['model']}"
-            if decode.get("params"):
-                label = f"{label} ({decode['params']})"
+            if chart.get("model"):
+                label = f"{label}  ·  {chart['model']}"
+            if chart.get("params"):
+                label = f"{label} ({chart['params']})"
             self._tok.set_value_text(label)
             if self._tok.y_max_fixed is None or tok_s > self._tok.y_max_fixed * 0.9:
                 self._tok.y_max_fixed = max(tok_s * 1.25, 10.0)

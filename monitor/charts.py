@@ -67,6 +67,10 @@ class AreaChart(Gtk.Box):
     def set_value_text(self, text: str) -> None:
         self._value_lbl.set_label(text)
 
+    def set_title(self, title: str) -> None:
+        self.title = title
+        self._title_lbl.set_label(title)
+
     def _on_draw(self, _area: Gtk.DrawingArea, cr: cairo.Context, width: int, height: int) -> None:
         style = self.get_style_context()
         ok, fg = style.lookup_color("view_fg_color")
