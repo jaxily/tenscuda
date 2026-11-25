@@ -104,9 +104,23 @@ python -m tenscuda your_script.py
 `TENSCUDA_FAST=auto` tries delegate, then falls back to TT-XLA if vLLM is down.
 `enforce` also uses **delegate** (no TT-XLA) and **raises** if vLLM is unreachable.
 
-`load_causal_lm(...)` in delegate modes returns a **stub** (config only, no safetensors → card).
-Scripts that use `from_pretrained().cuda()` still load on TT-XLA unless they switch to
-`load_causal_lm` or we add a broader hook later.
+**Aggregate (~900+ tok/s):** set `TENSCUDA_FAST=aggregate` (aliases `b32`, `serving`), start serve with
+`max_num_seqs=32`, then run concurrent clients — **`python -m tenscuda aggregate --yes`** (writes
+`results/tenscuda_aggregate_*.json`). This saturates vLLM the same way offline b32 does;
+single `generate()` calls still use one HTTP request unless `batch_size>1` (concurrent per row).
+
+```bash
+# Terminal A
+bash scripts/run_tt_serve_fast.sh
+
+# Terminal B
+export TENSCUDA_FAST=aggregate
+export TENSCUDA_VLLM_BASE_URL=http://127.0.0.1:8000/v1
+python -m tenscuda aggregate --model unsloth/Meta-Llama-3.1-8B-Instruct --yes
+```
+
+`load_causal_lm(...)` and **`AutoModelForCausalLM.from_pretrained`** in delegate/aggregate modes return a
+**stub** (config only, no safetensors → card).
 
 ## Fast vs compat split (tested)
 
@@ -115,6 +129,7 @@ Scripts that use `from_pretrained().cuda()` still load on TT-XLA unless they swi
 | `off` (default) | yes | TT-XLA compat (no warning) |
 | `advisory` | yes | TT-XLA + **warn** |
 | `delegate` / `vllm` | yes | **vLLM HTTP** (skip XLA decode) if serve up |
+| `aggregate` / `b32` | yes | **vLLM HTTP**; use `python -m tenscuda aggregate` for ~900 tok/s |
 | `auto` | yes | vLLM if up, else TT-XLA |
 | `enforce` | yes | **vLLM only** — error if not up |
 | any | not on list | TT-XLA (matrix models) |

@@ -35,6 +35,8 @@ def _normalize_fast_mode(raw: str) -> str:
         return "enforce"
     if v in {"delegate", "vllm", "native"}:
         return "delegate"
+    if v in {"aggregate", "b32", "serving"}:
+        return "aggregate"
     if v == "auto":
         return "auto"
     if v == "advisory":
@@ -43,8 +45,21 @@ def _normalize_fast_mode(raw: str) -> str:
 
 
 def fast_mode() -> str:
-    """``off`` | ``advisory`` | ``enforce`` | ``delegate`` | ``auto`` | ``vllm`` (alias)."""
+    """``off`` | ``advisory`` | ``enforce`` | ``delegate`` | ``aggregate`` | ``auto``."""
     return _normalize_fast_mode(os.environ.get("TENSCUDA_FAST", "off"))
+
+
+def _vllm_delegate_modes() -> frozenset[str]:
+    return frozenset({"delegate", "auto", "enforce", "aggregate"})
+
+
+def use_aggregate_client() -> bool:
+    """True when decode should saturate vLLM with concurrent HTTP (target ~900+ tok/s)."""
+    return fast_mode() == "aggregate"
+
+
+def default_aggregate_concurrency() -> int:
+    return int(os.environ.get("TENSCUDA_AGGREGATE_CONCURRENCY", "32"))
 
 
 def model_id_from_config(config) -> str | None:
@@ -61,8 +76,10 @@ def skip_xla_weights_load(model_id: str | None) -> bool:
     """True when ``load_causal_lm`` should not stream weights to the card (vLLM owns weights)."""
     if not model_id:
         return False
-    d = decide_route(model_id=model_id.strip(), batch_size=1, greedy=True)
-    return d.route == "delegate"
+    mid = model_id.strip()
+    if not is_fast_eligible(mid):
+        return False
+    return fast_mode() in _vllm_delegate_modes()
 
 
 def is_fast_eligible(model_id: str | None) -> bool:
@@ -100,15 +117,22 @@ def decide_route(
     if mode == "off":
         return RouteDecision("compat", model_id, "TENSCUDA_FAST off")
     if batch_size != 1:
+        if mode in _vllm_delegate_modes():
+            return RouteDecision(
+                "delegate",
+                model_id,
+                f"TENSCUDA_FAST={mode} batch={batch_size} -> vLLM concurrent",
+            )
         return RouteDecision(
             "fast",
             model_id,
-            "aggregate serving: use vLLM/metal batching, not TT-XLA batch probe",
+            "aggregate serving: set TENSCUDA_FAST=aggregate and run vLLM serve",
         )
     if not greedy:
         return RouteDecision("compat", model_id, "sampling requires compat/HF path today")
-    if mode in {"delegate", "auto", "enforce"}:
-        return RouteDecision("delegate", model_id, f"TENSCUDA_FAST={mode} -> vLLM-TT")
+    if mode in _vllm_delegate_modes():
+        label = "aggregate concurrent client" if mode == "aggregate" else "vLLM-TT"
+        return RouteDecision("delegate", model_id, f"TENSCUDA_FAST={mode} -> {label}")
     if mode == "advisory":
         return RouteDecision("fast", model_id, "TENSCUDA_FAST=advisory")
     return RouteDecision("compat", model_id, "default compat")

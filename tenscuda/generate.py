@@ -211,7 +211,13 @@ def _compile_unlock_generate(model, ids_cpu, max_new_tokens, *, stats=None):
 
 def _try_vllm_delegate(model, input_ids, max_new_tokens, eos_token_id):
     from tenscuda.fast_router import decide_route, fast_mode, maybe_block_compat_generate, model_id_from_config
-    from tenscuda.vllm_delegate import VllmDelegateError, delegate_error_hint, delegate_greedy_generate
+    from tenscuda.vllm_delegate import (
+        VllmDelegateError,
+        delegate_batch_greedy_generate,
+        delegate_error_hint,
+        delegate_greedy_generate,
+        probe_vllm,
+    )
 
     ids_cpu = input_ids.detach().to("cpu")
     decision = decide_route(
@@ -220,7 +226,26 @@ def _try_vllm_delegate(model, input_ids, max_new_tokens, eos_token_id):
         greedy=True,
     )
     if decision.route == "delegate":
+        mode = fast_mode()
+        if mode in {"auto", "enforce", "aggregate"} and os.environ.get("TENSCUDA_VLLM_PROBE", "1") != "0":
+            if not probe_vllm():
+                if mode == "auto":
+                    log.warning("tenscuda: vLLM down; falling back to TT-XLA")
+                else:
+                    raise RuntimeError(
+                        delegate_error_hint(VllmDelegateError(f"vLLM not reachable at probe"))
+                    )
+                maybe_block_compat_generate(decision)
+                return None
         try:
+            if ids_cpu.shape[0] > 1:
+                return delegate_batch_greedy_generate(
+                    model,
+                    input_ids,
+                    max_new_tokens=max_new_tokens,
+                    eos_token_id=eos_token_id,
+                    decision=decision,
+                )
             return delegate_greedy_generate(
                 model,
                 input_ids,
@@ -229,7 +254,7 @@ def _try_vllm_delegate(model, input_ids, max_new_tokens, eos_token_id):
                 decision=decision,
             )
         except VllmDelegateError as exc:
-            if fast_mode() == "auto":
+            if mode == "auto":
                 log.warning("tenscuda: vLLM delegate failed (%s); falling back to TT-XLA", exc)
             else:
                 raise RuntimeError(delegate_error_hint(exc)) from exc

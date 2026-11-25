@@ -6,7 +6,7 @@ import pytest
 def test_skip_xla_weights_when_delegate():
     from tenscuda.fast_router import skip_xla_weights_load
 
-    os.environ["TENSCUDA_FAST"] = "delegate"
+    os.environ["TENSCUDA_FAST"] = "aggregate"
     try:
         assert skip_xla_weights_load("unsloth/Meta-Llama-3.1-8B-Instruct")
         assert not skip_xla_weights_load("HuggingFaceTB/SmolLM2-135M-Instruct")

@@ -384,7 +384,14 @@ def _patch_hf_generate():
         if (not on_tt and not delegate) or args or os.environ.get("TENSCUDA_HF_GENERATE") == "1":
             return orig(self, input_ids, *args, **kw)
         unsupported = set(kw) - _STATIC_OK_KW
-        if greedy and input_ids is not None and input_ids.shape[0] == 1 and not unsupported:
+        delegate_batch = (
+            greedy
+            and input_ids is not None
+            and input_ids.shape[0] > 1
+            and decide_route(model_id=mid, batch_size=int(input_ids.shape[0]), greedy=True).route
+            == "delegate"
+        )
+        if greedy and input_ids is not None and (input_ids.shape[0] == 1 or delegate_batch) and not unsupported:
             from .generate import static_greedy_generate
 
             mnt = kw.get("max_new_tokens") or getattr(gc, "max_new_tokens", None) or 20
@@ -399,6 +406,30 @@ def _patch_hf_generate():
         return orig(self, input_ids, *args, **kw)
 
     GenerationMixin.generate = generate
+
+
+def _patch_hf_from_pretrained():
+    try:
+        from transformers import AutoModelForCausalLM
+    except Exception:
+        return
+    orig = AutoModelForCausalLM.from_pretrained
+    _S.originals["AutoModelForCausalLM.from_pretrained"] = orig
+
+    @classmethod
+    @functools.wraps(orig.__func__)
+    def from_pretrained(cls, pretrained_model_name_or_path, *args, **kwargs):
+        from tenscuda.fast_router import skip_xla_weights_load
+
+        mid = str(pretrained_model_name_or_path)
+        if cls is AutoModelForCausalLM and skip_xla_weights_load(mid):
+            from tenscuda.loader import load_causal_lm_delegate_stub
+
+            dtype = kwargs.get("torch_dtype", kwargs.get("dtype", torch.bfloat16))
+            return load_causal_lm_delegate_stub(mid, dtype=dtype, verbose=False)
+        return orig.__func__(cls, pretrained_model_name_or_path, *args, **kwargs)
+
+    AutoModelForCausalLM.from_pretrained = from_pretrained
 
 
 def _set_compile_options():
@@ -450,6 +481,7 @@ def install(fp16_to_bf16: bool = True, static_cache: bool = True) -> _State:
     torch.device = _make_device_proxy()
     if static_cache:
         _patch_hf_generate()
+        _patch_hf_from_pretrained()
     _S.device = _xla_device(0)
     _S.active = True
     mig.register_summary_on_exit()
@@ -482,5 +514,9 @@ def uninstall():
             from transformers.generation.utils import GenerationMixin
 
             GenerationMixin.generate = v
+        elif k == "AutoModelForCausalLM.from_pretrained":
+            from transformers import AutoModelForCausalLM
+
+            AutoModelForCausalLM.from_pretrained = v
     o.clear()
     _S.active = False

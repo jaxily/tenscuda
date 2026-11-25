@@ -4,7 +4,13 @@ from unittest.mock import patch
 import torch
 
 from tenscuda.fast_router import RouteDecision, decide_route
-from tenscuda.vllm_delegate import VllmDelegateError, delegate_greedy_generate, probe_vllm, vllm_base_url
+from tenscuda.vllm_delegate import (
+    VllmDelegateError,
+    delegate_aggregate,
+    delegate_greedy_generate,
+    probe_vllm,
+    vllm_base_url,
+)
 
 
 class _MiniModel:
@@ -15,7 +21,7 @@ class _MiniModel:
 
 
 def test_decide_delegate_modes():
-    for mode in ("delegate", "vllm", "auto", "enforce"):
+    for mode in ("delegate", "vllm", "auto", "enforce", "aggregate"):
         d = decide_route(
             model_id="unsloth/Meta-Llama-3.1-8B-Instruct",
             batch_size=1,
@@ -71,3 +77,25 @@ def test_probe_vllm_false_on_error():
 
 def test_vllm_base_url_default():
     assert vllm_base_url().endswith("/v1")
+
+
+def test_delegate_aggregate_concurrent():
+    payloads = []
+
+    def fake_http(method, url, payload=None):
+        if method == "GET":
+            return {"data": []}
+        payloads.append(payload)
+        return {"choices": [{"text": " tok"}], "usage": {"completion_tokens": 8}}
+
+    with patch("tenscuda.vllm_delegate._http_json", side_effect=fake_http):
+        res = delegate_aggregate(
+            model_id="unsloth/Meta-Llama-3.1-8B-Instruct",
+            num_prompts=4,
+            concurrency=4,
+            max_new_tokens=8,
+        )
+    assert res.num_prompts == 4
+    assert res.total_new_tokens == 32
+    assert res.aggregate_tok_s > 0
+    assert len(payloads) == 4

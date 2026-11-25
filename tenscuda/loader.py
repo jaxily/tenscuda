@@ -83,7 +83,7 @@ def _rebuild_nonpersistent_buffers(model, config, device):
 
 
 def load_causal_lm_delegate_stub(model_id: str, dtype=torch.bfloat16, verbose=True):
-    """Config + anchor only — for ``TENSCUDA_FAST=delegate``; vLLM serves weights."""
+    """Config + anchor only — for ``TENSCUDA_FAST=delegate|aggregate``; vLLM serves weights."""
     from tenscuda.fast_router import skip_xla_weights_load
 
     if not skip_xla_weights_load(model_id):

@@ -87,3 +87,22 @@ def test_fast_mode_delegate_aliases():
             assert fast_mode() == want
         finally:
             del os.environ["TENSCUDA_FAST"]
+
+
+def test_decide_aggregate_batch_routes_delegate():
+    d = decide_route(
+        model_id="unsloth/Meta-Llama-3.1-8B-Instruct",
+        batch_size=8,
+        greedy=True,
+        fast_mode_value="aggregate",
+    )
+    assert d.route == "delegate"
+
+
+def test_fast_mode_aggregate_aliases():
+    for raw in ("aggregate", "b32", "serving"):
+        os.environ["TENSCUDA_FAST"] = raw
+        try:
+            assert fast_mode() == "aggregate"
+        finally:
+            del os.environ["TENSCUDA_FAST"]

@@ -39,6 +39,11 @@ CHARACTER_BIBLE_SING = (
     f"{_DOGS} Dogs clearly SING the carol Jingle Bells with audible merry vocals and "
     "jingle bells; mouths move in sync with the lyrics while they run and play."
 )
+CHARACTER_BIBLE_SPECTACLE = (
+    f"{_DOGS} Premium cinematic Christmas action reel — stylized live-action, rich practical light, "
+    "anamorphic vertical phone energy, bold camera, crisp diegetic SFX. "
+    "NO lip-sync karaoke, NO dogs singing lyrics, NO cartoon rubber faces, NO Pixar CGI look."
+)
 
 PRESETS: dict[str, tuple[str, list[dict]]] = {
     "action": (
@@ -155,20 +160,100 @@ PRESETS: dict[str, tuple[str, list[dict]]] = {
             },
         ],
     ),
+    # Lean into Turbo strengths: bold camera, diegetic SFX, stylized continuity — not photo likeness.
+    "spectacle": (
+        CHARACTER_BIBLE_SPECTACLE,
+        [
+            {
+                "id": "01_threshold",
+                "seed": 3101,
+                "prompt": (
+                    f"{CHARACTER_BIBLE_SPECTACLE} "
+                    "[Shot 1] Cinematic live-action anamorphic vertical phone reel. "
+                    "Night exterior: snowing hard outside a warm Christmas house. "
+                    "Door SLAMS open toward camera — warm interior light floods the lens. "
+                    "Buddy the golden fills the frame mid-sprint, red scarf whipping, "
+                    "snow crystals streaking past; whip-pan as he blasts past camera into the hall. "
+                    "overall_soundscape: door slam whoosh, wind, paw scramble on wood, distant jingle bells. "
+                    "non_diegetic_music: short brass hit + rising sleigh-bell stinger."
+                ),
+            },
+            {
+                "id": "02_pursuit",
+                "seed": 3102,
+                "last_keyframe_prompt": (
+                    f"{CHARACTER_BIBLE_SPECTACLE} "
+                    "End pose freeze-frame energy: Buddy and Pip skidding to a halt beside the lit "
+                    "Christmas tree, wrapping paper at paws, fairy lights bokeh, looking forward, "
+                    "scarves/bow still, living-room depth sharp."
+                ),
+                "prompt": (
+                    f"{CHARACTER_BIBLE_SPECTACLE} "
+                    "[Shot 1] Low tracking dolly down the hallway — Buddy sprints ahead, "
+                    "Pip the border collie rockets after him, green bow bouncing, "
+                    "rugs sliding, framed photos rattling on walls. "
+                    "[Shot 2] Camera races into the living room and lands beside the Christmas tree. "
+                    "overall_soundscape: claw clicks, collar tags, wood creak, muffled carol from a stereo. "
+                    "non_diegetic_music: driving percussion under jingle bells, no vocals."
+                ),
+            },
+            {
+                "id": "03_detonation",
+                "seed": 3103,
+                "prompt": (
+                    f"{CHARACTER_BIBLE_SPECTACLE} "
+                    "[Shot 1] Buddy and Pip slam-brake into a mountain of wrapping paper under the tree; "
+                    "paper EXPLODES in slow-mo shards of red/gold/green, fairy lights strobe through debris, "
+                    "comic but cinematic — 48fps feel then snap back. "
+                    "Camera orbits 90° around them as paper rains. "
+                    "overall_soundscape: paper roar, skid squeak, soft cartoon boing under real physics. "
+                    "non_diegetic_music: big drum hit then quiet shimmer."
+                ),
+            },
+            {
+                "id": "04_airborne",
+                "seed": 3104,
+                "prompt": (
+                    f"{CHARACTER_BIBLE_SPECTACLE} "
+                    "[Shot 1] Hero slow-mo: Snowball the samoyed LEAPS over Buddy and Pip with a squeaky toy "
+                    "clamped in her jaws, tiny Santa hat staying on, fluffy coat backlit by tree lights "
+                    "into a rim-light halo; camera tilts up under the arc then soft-lands with her. "
+                    "overall_soundscape: air whoosh, toy squeak, soft thud landing, audience-cheer room tone. "
+                    "non_diegetic_music: swelling choir pad + single sleigh-bell cascade — no lyric singing."
+                ),
+            },
+            {
+                "id": "05_tableau",
+                "seed": 3105,
+                "prompt": (
+                    f"{CHARACTER_BIBLE_SPECTACLE} "
+                    "[Shot 1] Payoff tableau: all three dogs pop up from wrapping paper side-by-side facing camera, "
+                    "tongues out, tails a blur, paper still falling like confetti, tree sparkling behind. "
+                    "Slow push-in to medium shot, handheld micro-shake, fairy-light bokeh. "
+                    "They hold the look — victorious, mischievous, viral ending freeze energy. "
+                    "overall_soundscape: happy pants, paper flutter, collar jingles, one soft bark. "
+                    "non_diegetic_music: final triumphant jingle-bell sting and cut."
+                ),
+            },
+        ],
+    ),
 }
 
-# Real two-dog reel: photo keyframes + bright girl vocals (paths filled at runtime).
+# Real two-dog reel: photo keyframes. Keep look photoreal; audio natural (no synth karaoke).
 _OUR_DOGS = (
-    "Exactly these two real dogs only (no third dog, no costume hats): "
-    "GOLDEN — medium/large adult dog, thick wavy golden-apricot coat, black nose, "
-    "dark soulful eyes, long floppy ears, soft friendly face. "
-    "CREAM — small fluffy cream/apricot doodle-mix, curly soft fur, round face, "
-    "dark eyes, floppy ears, slight underbite lip, looking cute and bright. "
-    "Same Christmas house: front door, hallway to living room, tree on the left, "
-    "fairy lights, wrapping paper on the floor, vertical 9:16 phone reel. "
-    "Audio: bright young GIRL voices (sweet high female child vocals) singing "
-    "Jingle Bells in harmony — no deep male voices, no growly dog-voice karaoke; "
-    "clear girlish carol + jingle bells while the dogs' mouths move with the lyrics."
+    "Photoreal handheld iPhone video of exactly these two real household dogs only "
+    "(match the reference photos — real fur texture, real eyes, natural proportions; "
+    "NO cartoon, NO CGI, NO Pixar, NO 3D render, NO airbrushed plastic fur, NO beauty filter): "
+    "GOLDEN — medium/large adult golden-apricot dog, thick wavy coat with individual strands, "
+    "black nose, dark soulful eyes, long floppy ears. "
+    "CREAM — smaller fluffy cream/apricot doodle-mix, curly soft fur, round face, "
+    "dark eyes, floppy ears, slight underbite lip. "
+    "Same real Christmas house: front door, hallway to living room, tree on the left, "
+    "warm fairy lights, wrapping paper on the floor, vertical 9:16 phone reel, mild grain. "
+    "Audio: natural room tone — paw clicks, collar tags, paper rustle, happy panting/play barks; "
+    "a quiet real stereo in another room plays a soft acoustic Jingle Bells faintly "
+    "(human recording, imperfect, distant, muffled by walls — NOT studio Auto-Tune, "
+    "NOT TTS, NOT synthetic choir, NOT dogs singing karaoke, NO lip-sync mouthing lyrics)."
 )
 
 
@@ -178,57 +263,59 @@ def _our_dogs_scenes(refs: Path) -> list[dict]:
     return [
         {
             "id": "01_bolt",
-            "seed": 2801,
+            "seed": 2901,
             "first_frame_path": golden,
             "prompt": (
                 f"{_OUR_DOGS} "
-                "HOOK from the photo likeness: Front door flies open. The GOLDEN dog bolts into "
-                "the hallway singing with a bright young girl voice mouthing "
-                "'Dashing through the snow', scarf-free natural coat flying, whip-pan follow."
+                "HOOK from photo likeness: Front door flies open. The GOLDEN dog bolts into the "
+                "hallway at a real run — coat and ears flying, paws scrambling, natural pant, "
+                "whip-pan follow, motion blur. Mouth closed or panting, not singing."
             ),
         },
         {
             "id": "02_chase",
-            "seed": 2802,
+            "seed": 2902,
             "last_keyframe_prompt": (
                 f"{_OUR_DOGS} "
-                "End pose near the Christmas tree: GOLDEN and CREAM together, still mid-song, "
-                "mouths open, wrapping paper at their paws, living-room tree behind them."
+                "End pose near the Christmas tree: GOLDEN and CREAM side by side (not stacked), "
+                "natural playful faces, wrapping paper at their paws, living-room tree behind them. "
+                "Photoreal, mouths closed or soft pant — no exaggerated open-mouth singing pose."
             ),
             "last_keyframe_first_frame_path": cream,
             "prompt": (
                 f"{_OUR_DOGS} "
-                "CHASE: The little CREAM fluffy dog races after the GOLDEN down the hall to the tree "
-                "while both 'sing' as bright girl duet vocals — 'Jingle bells, jingle bells' — "
-                "mouths in sync, low tracking camera, start at door-hall, END at tree."
+                "CHASE: The little CREAM fluffy dog races after the GOLDEN down the hall to the tree. "
+                "Low tracking camera, real run cycles, rugs sliding. Start at door-hall, END at tree. "
+                "No singing, no lip-sync."
             ),
         },
         {
             "id": "03_skid",
-            "seed": 2803,
+            "seed": 2903,
             "prompt": (
                 f"{_OUR_DOGS} "
-                "SKID: Both dogs skid into wrapping paper under the tree belting "
-                "'oh what fun it is to ride' in sweet high girl choir voices, paper explodes."
+                "SKID: Both dogs slam-brake into wrapping paper under the tree; paper explodes, "
+                "comic but photoreal skid, rustling SFX, happy play-bark. No singing."
             ),
         },
         {
             "id": "04_leap",
-            "seed": 2804,
+            "seed": 2904,
             "first_frame_path": cream,
             "prompt": (
                 f"{_OUR_DOGS} "
-                "LEAP: The small CREAM dog leaps over the GOLDEN with playful energy, "
-                "girl vocals soar on 'jingle all the way', slow-mo jump, camera tilts up."
+                "LEAP: The small CREAM dog leaps playfully over the GOLDEN — real dog physics, "
+                "soft fur in motion, brief slow-mo, camera tilts up, soft landing. No singing."
             ),
         },
         {
             "id": "05_tumble",
-            "seed": 2805,
+            "seed": 2905,
             "prompt": (
                 f"{_OUR_DOGS} "
-                "PAYOFF: Both tumble then pop up for the final girl-voice 'hey!' of Jingle Bells, "
-                "look at camera, mouths open, tails wagging, paper falling, viral ending."
+                "PAYOFF: Both tumble in wrapping paper then sit/stand side by side looking toward "
+                "camera with natural happy dog faces (soft pant or closed mouth — not wide cartoon "
+                "grins), tails wagging, paper falling. Photoreal viral ending, no singing."
             ),
         },
     ]
@@ -446,7 +533,7 @@ def main() -> int:
         "--preset",
         choices=sorted(PRESETS) + ["our_dogs_sing"],
         default="action",
-        help="Story arc: action | singing_action | our_dogs_sing (photo refs + girl vocals)",
+        help="Story arc: action | singing_action | spectacle | our_dogs_sing (photo refs)",
     )
     ap.add_argument(
         "--refs",
