@@ -175,11 +175,20 @@ def test_term_render_frame_video():
         "total_steps": 8,
     }
     frame = term.render_frame(snap, "Denoising  ·  MiniMax-H3  ·  42%", chart, hist)
-    assert "TensCUDA Monitor (tty)" in frame
+    assert "TensCUDA Monitor" in frame
     assert "Gen progress" in frame
     assert "42%" in frame
     assert "Temperature" in frame
     assert "Host RAM" in frame
+    assert "╭" in frame and "╰" in frame
+    assert "\033[" not in frame
+
+    colored = term.render_frame(
+        snap, "Denoising  ·  MiniMax-H3  ·  42%", chart, term.new_history(n=8), color=True
+    )
+    assert "\033[38;2;" in colored
+    assert "Gen progress" in colored
+    assert "READY" in colored
 
 
 def test_main_dispatches_tty(monkeypatch):
