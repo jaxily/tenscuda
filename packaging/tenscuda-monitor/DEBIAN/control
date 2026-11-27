@@ -11,7 +11,7 @@ Description: Live Tenstorrent card monitor for TensCUDA
  temperature, power, AI clock, host memory, and TensCUDA decode speed
  when a workload is running.
  .
- Installs the TensCUDA Monitor desktop app and the tenscuda-monitor CLI.
+ Installs the TensCUDA Monitor desktop app and the uptens CLI.
  Card telemetry comes from sysfs; tok/s updates when TensCUDA is also
  installed and emitting activity events.
 Homepage: https://github.com/jaxily/tenscuda

@@ -28,12 +28,12 @@ rsync -a --delete \
 mkdir -p "$STAGE/usr/share/icons"
 cp -a "$ROOT/monitor/icons/hicolor" "$STAGE/usr/share/icons/"
 
-# Desktop entry (Exec already = tenscuda-monitor)
+# Desktop entry (Exec already = uptens)
 mkdir -p "$STAGE/usr/share/applications"
-cp "$ROOT/monitor/tenscuda-monitor.desktop" "$STAGE/usr/share/applications/"
+cp "$ROOT/monitor/uptens.desktop" "$STAGE/usr/share/applications/"
 
 # Launcher permissions + DEBIAN metadata
-chmod 755 "$STAGE/usr/bin/tenscuda-monitor"
+chmod 755 "$STAGE/usr/bin/uptens"
 chmod 755 "$STAGE/DEBIAN"
 chmod 644 "$STAGE/DEBIAN/control"
 

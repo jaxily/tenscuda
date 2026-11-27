@@ -239,8 +239,8 @@ sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1
 bash scripts/install_monitor_on_host.sh
 ```
 
-Then open **TensCUDA Monitor** from Activities, or run `tenscuda-monitor`.
-Terminal (no GUI): `tenscuda-monitor --tty` or `python -m monitor --tty`.
+Then open **TensCUDA Monitor** from Activities, or run `uptens`.
+Terminal (no GUI): `uptens --tty` or `python -m monitor --tty`.
 See [packaging/README.md](packaging/README.md).
 
 ## Benchmark your card

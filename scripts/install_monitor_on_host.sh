@@ -2,11 +2,13 @@
 # Install TensCUDA Monitor as a normal Ubuntu app (Activities + CLI).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-chmod +x "$ROOT/scripts/tenscuda-monitor" "$ROOT/scripts/install_monitor_on_host.sh"
+chmod +x "$ROOT/scripts/uptens" "$ROOT/scripts/install_monitor_on_host.sh"
 
 # CLI command on PATH
 mkdir -p "$HOME/.local/bin"
-ln -sfn "$ROOT/scripts/tenscuda-monitor" "$HOME/.local/bin/tenscuda-monitor"
+ln -sfn "$ROOT/scripts/uptens" "$HOME/.local/bin/uptens"
+# Drop old name if present
+rm -f "$HOME/.local/bin/tenscuda-monitor"
 
 # Ensure ~/.local/bin is on PATH for future shells
 for rc in "$HOME/.bashrc" "$HOME/.profile"; do
@@ -26,9 +28,10 @@ gtk-update-icon-cache -f "$ICON_ROOT" 2>/dev/null || true
 APP_DIR="$HOME/.local/share/applications"
 mkdir -p "$APP_DIR"
 # Rewrite Exec to absolute path so it works even before PATH is refreshed
-sed "s|^Exec=tenscuda-monitor$|Exec=$HOME/.local/bin/tenscuda-monitor|" \
-  "$ROOT/monitor/tenscuda-monitor.desktop" > "$APP_DIR/tenscuda-monitor.desktop"
-chmod 644 "$APP_DIR/tenscuda-monitor.desktop"
+sed "s|^Exec=uptens$|Exec=$HOME/.local/bin/uptens|" \
+  "$ROOT/monitor/uptens.desktop" > "$APP_DIR/uptens.desktop"
+rm -f "$APP_DIR/tenscuda-monitor.desktop"
+chmod 644 "$APP_DIR/uptens.desktop"
 update-desktop-database "$APP_DIR" 2>/dev/null || true
 
 # User-local cairo GI binding if system package missing
@@ -52,5 +55,5 @@ fi
 
 echo "Installed:"
 echo "  Activities search: TensCUDA Monitor"
-echo "  Terminal:          tenscuda-monitor"
-echo "  gtk-launch:        gtk-launch tenscuda-monitor"
+echo "  Terminal:          uptens"
+echo "  gtk-launch:        gtk-launch uptens"

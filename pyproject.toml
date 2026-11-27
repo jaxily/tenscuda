@@ -19,4 +19,4 @@ test = ["pytest"]
 packages = ["tenscuda", "monitor"]
 
 [project.scripts]
-tenscuda-monitor = "monitor.__main__:main"
+uptens = "monitor.__main__:main"
